@@ -38,10 +38,31 @@ async def login(
     user_repo = UserRepository(db)
     user = await user_repo.find_by_username_across_tenants(request.username)
 
+    from services.audit.audit_service import log_audit_event
+
     if user is None or not verify_password(request.password, user.password_hash):
+        if user is not None:
+            await log_audit_event(
+                session=db,
+                tenant_id=user.tenant_id,
+                user_id=user.id,
+                action="login_failed",
+                details={"username": request.username, "reason": "invalid_credentials"},
+                description=f"Failed login attempt for user '{request.username}'",
+            )
+            await db.commit()
         raise AuthenticationError(detail="Invalid username or password")
 
     if not user.is_active:
+        await log_audit_event(
+            session=db,
+            tenant_id=user.tenant_id,
+            user_id=user.id,
+            action="login_failed",
+            details={"username": request.username, "reason": "account_disabled"},
+            description=f"Login attempt on disabled account '{request.username}'",
+        )
+        await db.commit()
         raise AuthenticationError(detail="Account is disabled")
 
     role_names = [role.name for role in user.roles]
@@ -55,6 +76,16 @@ async def login(
         user_id=str(user.id),
         tenant_id=str(user.tenant_id),
     )
+
+    await log_audit_event(
+        session=db,
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        action="login_success",
+        details={"username": request.username},
+        description=f"User '{request.username}' logged in successfully",
+    )
+    await db.commit()
 
     logger.info(
         "User logged in",

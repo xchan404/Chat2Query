@@ -33,6 +33,17 @@ async def upload_file(
         knowledge_base_id=knowledge_base_id,
         user_id=uuid.UUID(current_user.user_id),
     )
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="file_uploaded",
+        resource_type="file",
+        resource_id=str(file_record.id),
+        details={"file_name": file_record.file_name, "chunk_count": file_record.chunk_count},
+        description=f"File '{file_record.file_name}' uploaded and processed",
+    )
     await db.commit()
     return FileOut.model_validate(file_record)
 
@@ -77,6 +88,18 @@ async def delete_file(
     deleted = await repo.delete_by_id(uuid.UUID(current_user.tenant_id), file_id)
     if not deleted:
         raise NotFoundError("File not found")
+
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="file_deleted",
+        resource_type="file",
+        resource_id=str(file_id),
+        description=f"File '{file_id}' deleted",
+    )
+    await db.commit()
     await db.commit()
 
 

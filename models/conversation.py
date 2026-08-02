@@ -26,6 +26,7 @@ class Conversation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     title: Mapped[str | None] = mapped_column(String(500), nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     conversation_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Relationships

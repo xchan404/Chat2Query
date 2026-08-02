@@ -83,23 +83,33 @@
 
 ## Phase 7 — Conversations, Citations, Audit Log ✅
 
-- [x] `repositories/conversation_repo.py` — conversation history, message details, and citation lookups
+- [x] `repositories/conversation_repo.py` — conversation history, message details, and citation lookups with soft-delete archiving
 - [x] `services/audit/audit_service.py` — central audit logging service
-- [x] Audit logging wired across all endpoints: connection tests, schema syncs, permission changes, and chat turns
+- [x] Audit logging wired across all endpoints: connection tests, schema syncs, permission changes, logins, connection CRUD, file operations, and chat turns
 - [x] Routes: `GET /api/conversations`, `GET /api/conversations/{id}`, `DELETE /api/conversations/{id}`
 - [x] Routes: `GET /api/messages/{id}/citations`, `GET /api/messages/{id}/sql`
-- [x] Routes: `GET /api/audit-logs`
+- [x] Routes: `GET /api/audit-logs` (admin role gated)
 
 **Definition of Done**: ✅
-- Conversations and message histories round-trip cleanly via `/api/conversations`.
-- Standalone `/api/messages/{id}/citations` and `/api/messages/{id}/sql` return citations and SQL execution records linked to chat turns.
-- Audit log entries recorded for connection tests, schema syncs, permission updates, and chat executions.
-- 105 passing unit tests.
 
 ---
 
-## Phase 8 — Tests, Security Hardening, Docs, Packaging
-- [ ] Integration tests
-- [ ] Security tests (cross-tenant, unauthorized table/column/row, destructive/multi-statement/comment SQL)
-- [ ] `README.md`, `Dockerfile`, final `docker-compose.yml`
-- [ ] OpenAPI export + example `curl` requests
+## Phase 8 — Tests, Security Hardening, Docs, Packaging ✅
+
+- [x] Security test suite (`tests/security/test_security_pipeline.py`):
+  - `test_cross_tenant_connection_access_denied`
+  - `test_unauthorized_table_access_blocked`
+  - `test_unauthorized_column_access_blocked`
+  - `test_unauthorized_row_filter_enforced`
+  - `test_destructive_sql_blocked`
+  - `test_multi_statement_sql_blocked`
+  - `test_sql_comment_injection_blocked`
+  - `test_oversized_limit_clamped`
+- [x] Integration test suite (`tests/integration/test_end_to_end_flow.py`)
+- [x] `README.md` complete with setup, setup instructions, testing commands, API curl examples, architecture, MVP scope trade-off write-up, and AI assistance acknowledgment
+- [x] Exported OpenAPI specification (`openapi.json`)
+- [x] `Dockerfile` and `docker-compose.yml` configured and verified for clean `docker-compose up`
+- [x] Total test suite: 114 passing tests across unit, security, and integration
+
+**Definition of Done**: ✅
+- All items in BUILD_PLAN.md Section 10 (Deliverables Checklist) and Section 15 (Acceptance Criteria) satisfied.

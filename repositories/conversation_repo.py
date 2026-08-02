@@ -20,10 +20,13 @@ class ConversationRepository:
     async def list_conversations(
         self, tenant_id: uuid.UUID, limit: int = 50, offset: int = 0
     ) -> list[Conversation]:
-        """List tenant's conversations ordered by creation date."""
+        """List active tenant conversations ordered by creation date."""
         stmt = (
             select(Conversation)
-            .where(Conversation.tenant_id == tenant_id)
+            .where(
+                Conversation.tenant_id == tenant_id,
+                Conversation.status == "active",
+            )
             .order_by(Conversation.created_at.desc())
             .limit(limit)
             .offset(offset)
@@ -49,14 +52,14 @@ class ConversationRepository:
     async def delete_conversation(
         self, tenant_id: uuid.UUID, conversation_id: uuid.UUID
     ) -> bool:
-        """Delete conversation by ID."""
-        stmt = delete(Conversation).where(
-            Conversation.id == conversation_id,
-            Conversation.tenant_id == tenant_id,
-        )
-        result = await self.session.execute(stmt)
+        """Soft-delete conversation by setting status='archived' to preserve citation & audit trails."""
+        conv = await self.get_conversation_detail(tenant_id, conversation_id)
+        if conv is None:
+            return False
+        conv.status = "archived"
+        self.session.add(conv)
         await self.session.flush()
-        return result.rowcount > 0
+        return True
 
     async def get_message_citations(
         self, tenant_id: uuid.UUID, message_id: uuid.UUID

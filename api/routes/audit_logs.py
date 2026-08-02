@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from core.tenant_context import CurrentUser, get_current_user
+from core.tenant_context import CurrentUser, require_role
 from schemas.conversation import AuditLogOut
 from services.audit.audit_service import list_audit_logs
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/audit-logs", tags=["audit-logs"])
 async def get_audit_logs(
     limit: int = 100,
     offset: int = 0,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> list[AuditLogOut]:
     """List audit log entries for the current tenant."""

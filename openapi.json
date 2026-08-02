@@ -1,0 +1,3239 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Text-to-SQL & Document Chat Platform",
+    "description": "Multi-tenant platform for natural language database queries and document chat",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Authenticate user and return JWT token pair.\n\nThe username is looked up across all tenants (login doesn't require\nknowing the tenant beforehand). The tenant_id is embedded in the\ntoken from the user's record.",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh Token",
+        "description": "Refresh token rotation: validate refresh token, issue a new pair.",
+        "operationId": "refresh_token_api_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Me",
+        "description": "Return the authenticated user's information, scoped by their JWT tenant.",
+        "operationId": "get_me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/database-connections": {
+      "post": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "Create Connection",
+        "description": "Create a new database connection. Password is encrypted at rest.",
+        "operationId": "create_connection_api_database_connections_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "List Connections",
+        "description": "List all database connections for the current tenant.",
+        "operationId": "list_connections_api_database_connections_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectionOut"
+                  },
+                  "title": "Response List Connections Api Database Connections Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database-connections/{connection_id}": {
+      "get": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "Get Connection",
+        "description": "Get a specific database connection by ID.",
+        "operationId": "get_connection_api_database_connections__connection_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "Update Connection",
+        "description": "Update a database connection. Re-encrypts password if changed.",
+        "operationId": "update_connection_api_database_connections__connection_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "Delete Connection",
+        "description": "Delete a database connection.",
+        "operationId": "delete_connection_api_database_connections__connection_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database-connections/{connection_id}/test": {
+      "post": {
+        "tags": [
+          "connections"
+        ],
+        "summary": "Test Connection Endpoint",
+        "description": "Test a database connection. Decrypts credentials transiently in memory.",
+        "operationId": "test_connection_endpoint_api_database_connections__connection_id__test_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database-connections/{connection_id}/sync-schema": {
+      "post": {
+        "tags": [
+          "schemas"
+        ],
+        "summary": "Sync Schema",
+        "description": "Introspect database schema via connection adapter and cache metadata.",
+        "operationId": "sync_schema_api_database_connections__connection_id__sync_schema_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncSchemaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database-connections/{connection_id}/schemas": {
+      "get": {
+        "tags": [
+          "schemas"
+        ],
+        "summary": "Get Schemas",
+        "description": "Get discovered schema metadata for a connection.",
+        "operationId": "get_schemas_api_database_connections__connection_id__schemas_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaOut"
+                  },
+                  "title": "Response Get Schemas Api Database Connections  Connection Id  Schemas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/database-connections/{connection_id}/tables": {
+      "get": {
+        "tags": [
+          "schemas"
+        ],
+        "summary": "Get Tables",
+        "description": "Get discovered tables (nested under schemas) for a connection.",
+        "operationId": "get_tables_api_database_connections__connection_id__tables_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaOut"
+                  },
+                  "title": "Response Get Tables Api Database Connections  Connection Id  Tables Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/permissions/tables": {
+      "post": {
+        "tags": [
+          "permissions"
+        ],
+        "summary": "Create Table Permission",
+        "description": "Grant or configure table permissions for a role.",
+        "operationId": "create_table_permission_api_permissions_tables_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TablePermissionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePermissionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/permissions/connections/{connection_id}": {
+      "get": {
+        "tags": [
+          "permissions"
+        ],
+        "summary": "List Connection Permissions",
+        "description": "List configured table permissions for a connection.",
+        "operationId": "list_connection_permissions_api_permissions_connections__connection_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Connection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TablePermissionOut"
+                  },
+                  "title": "Response List Connection Permissions Api Permissions Connections  Connection Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/permissions/tables/{permission_id}": {
+      "delete": {
+        "tags": [
+          "permissions"
+        ],
+        "summary": "Delete Table Permission",
+        "description": "Delete a table permission by ID.",
+        "operationId": "delete_table_permission_api_permissions_tables__permission_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "permission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Permission Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/query/sql": {
+      "post": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Execute Text To Sql",
+        "description": "Process a natural language question against a database connection.",
+        "operationId": "execute_text_to_sql_api_query_sql_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Text2SQLRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Execute Text To Sql Api Query Sql Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/knowledge-bases": {
+      "get": {
+        "tags": [
+          "knowledge-bases"
+        ],
+        "summary": "List Knowledge Bases",
+        "description": "List all knowledge bases for the current tenant.",
+        "operationId": "list_knowledge_bases_api_knowledge_bases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeBaseOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Knowledge Bases Api Knowledge Bases Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "knowledge-bases"
+        ],
+        "summary": "Create Knowledge Base",
+        "description": "Create a new knowledge base.",
+        "operationId": "create_knowledge_base_api_knowledge_bases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeBaseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeBaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/knowledge-bases/{kb_id}": {
+      "get": {
+        "tags": [
+          "knowledge-bases"
+        ],
+        "summary": "Get Knowledge Base",
+        "description": "Get a knowledge base by ID.",
+        "operationId": "get_knowledge_base_api_knowledge_bases__kb_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kb_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kb Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeBaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "knowledge-bases"
+        ],
+        "summary": "Delete Knowledge Base",
+        "description": "Delete a knowledge base.",
+        "operationId": "delete_knowledge_base_api_knowledge_bases__kb_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kb_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kb Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/upload": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Upload File",
+        "description": "Upload and process a document file.\n\nSupported types: PDF, DOCX, XLSX, CSV, TXT.\nProcessing: parse \u2192 chunk \u2192 embed \u2192 store (synchronous).",
+        "operationId": "upload_file_api_files_upload_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Knowledge Base Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_api_files_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "List Files",
+        "description": "List files in a knowledge base.",
+        "operationId": "list_files_api_files_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "knowledge_base_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Knowledge Base Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileOut"
+                  },
+                  "title": "Response List Files Api Files Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}": {
+      "get": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Get File",
+        "description": "Get file details by ID.",
+        "operationId": "get_file_api_files__file_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Delete File",
+        "description": "Delete a file and its chunks.",
+        "operationId": "delete_file_api_files__file_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/{file_id}/reprocess": {
+      "post": {
+        "tags": [
+          "files"
+        ],
+        "summary": "Reprocess File Endpoint",
+        "description": "Re-process an existing file (e.g. after model upgrade).",
+        "operationId": "reprocess_file_endpoint_api_files__file_id__reprocess_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Chat Sync",
+        "description": "Synchronous chat endpoint.\n\nReturns response matching assignment Section 9 contract shape exactly:\nmessage_id, conversation_id, intent, answer, sources_used, sql, citations.",
+        "operationId": "chat_sync_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/chat/stream": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Chat Stream",
+        "description": "SSE streaming chat endpoint emitting typed events (intent, sql_result, citation, token, done).",
+        "operationId": "chat_stream_api_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/conversations": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "List Conversations",
+        "description": "List all conversations for the current tenant.",
+        "operationId": "list_conversations_api_conversations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationOut"
+                  },
+                  "title": "Response List Conversations Api Conversations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{conversation_id}": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Get Conversation",
+        "description": "Get conversation details with full message history.",
+        "operationId": "get_conversation_api_conversations__conversation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Delete Conversation",
+        "description": "Delete a conversation and its messages.",
+        "operationId": "delete_conversation_api_conversations__conversation_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/citations": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Get Message Citations",
+        "description": "Get standalone list of citations for a specific message.",
+        "operationId": "get_message_citations_api_messages__message_id__citations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CitationOut"
+                  },
+                  "title": "Response Get Message Citations Api Messages  Message Id  Citations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/messages/{message_id}/sql": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Get Message Sql",
+        "description": "Get standalone SQL execution details for a specific message.",
+        "operationId": "get_message_sql_api_messages__message_id__sql_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Message Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SQLResultOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit-logs": {
+      "get": {
+        "tags": [
+          "audit-logs"
+        ],
+        "summary": "Get Audit Logs",
+        "description": "List audit log entries for the current tenant.",
+        "operationId": "get_audit_logs_api_audit_logs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogOut"
+                  },
+                  "title": "Response Get Audit Logs Api Audit Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditLogOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "action"
+        ],
+        "title": "AuditLogOut",
+        "description": "Output model for an audit log entry."
+      },
+      "Body_upload_file_api_files_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_api_files_upload_post"
+      },
+      "ChatRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          },
+          "connection_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
+          "knowledge_base_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Base Id"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "ChatRequest",
+        "description": "Request schema for sync and streaming chat endpoints."
+      },
+      "ChatResponse": {
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "title": "Conversation Id"
+          },
+          "intent": {
+            "type": "string",
+            "title": "Intent"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "sources_used": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources Used",
+            "default": []
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SQLResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/CitationOut"
+            },
+            "type": "array",
+            "title": "Citations",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "conversation_id",
+          "intent",
+          "answer"
+        ],
+        "title": "ChatResponse",
+        "description": "Full chat response matching Section 9 contract shape exactly."
+      },
+      "CitationOut": {
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "query_execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Execution Id"
+          },
+          "table_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Name"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_type"
+        ],
+        "title": "CitationOut",
+        "description": "Citation schema in chat response."
+      },
+      "ColumnOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "table_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Table Id"
+          },
+          "column_name": {
+            "type": "string",
+            "title": "Column Name"
+          },
+          "data_type": {
+            "type": "string",
+            "title": "Data Type"
+          },
+          "is_nullable": {
+            "type": "boolean",
+            "title": "Is Nullable"
+          },
+          "is_primary_key": {
+            "type": "boolean",
+            "title": "Is Primary Key"
+          },
+          "is_foreign_key": {
+            "type": "boolean",
+            "title": "Is Foreign Key"
+          },
+          "is_sensitive": {
+            "type": "boolean",
+            "title": "Is Sensitive"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "table_id",
+          "column_name",
+          "data_type",
+          "is_nullable",
+          "is_primary_key",
+          "is_foreign_key",
+          "is_sensitive"
+        ],
+        "title": "ColumnOut",
+        "description": "Output model for database column metadata."
+      },
+      "ColumnPermissionCreate": {
+        "properties": {
+          "column_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Column Name"
+          },
+          "is_allowed": {
+            "type": "boolean",
+            "title": "Is Allowed",
+            "default": true
+          },
+          "is_masked": {
+            "type": "boolean",
+            "title": "Is Masked",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "column_name"
+        ],
+        "title": "ColumnPermissionCreate",
+        "description": "Create or update column permission."
+      },
+      "ColumnPermissionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "table_permission_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Table Permission Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "column_name": {
+            "type": "string",
+            "title": "Column Name"
+          },
+          "is_allowed": {
+            "type": "boolean",
+            "title": "Is Allowed"
+          },
+          "is_masked": {
+            "type": "boolean",
+            "title": "Is Masked"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "table_permission_id",
+          "role_id",
+          "column_name",
+          "is_allowed",
+          "is_masked"
+        ],
+        "title": "ColumnPermissionOut",
+        "description": "Output model for column permission."
+      },
+      "ConnectionCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "database_type": {
+            "type": "string",
+            "pattern": "^(postgresql|mysql)$",
+            "title": "Database Type"
+          },
+          "host": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Host"
+          },
+          "port": {
+            "type": "integer",
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Port"
+          },
+          "database_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Database Name"
+          },
+          "username": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Password"
+          },
+          "ssl_enabled": {
+            "type": "boolean",
+            "title": "Ssl Enabled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "database_type",
+          "host",
+          "port",
+          "database_name",
+          "username",
+          "password"
+        ],
+        "title": "ConnectionCreate",
+        "description": "Create a new database connection."
+      },
+      "ConnectionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "database_type": {
+            "type": "string",
+            "title": "Database Type"
+          },
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "port": {
+            "type": "integer",
+            "title": "Port"
+          },
+          "database_name": {
+            "type": "string",
+            "title": "Database Name"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "ssl_enabled": {
+            "type": "boolean",
+            "title": "Ssl Enabled"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "name",
+          "database_type",
+          "host",
+          "port",
+          "database_name",
+          "username",
+          "ssl_enabled",
+          "is_active"
+        ],
+        "title": "ConnectionOut",
+        "description": "Connection data returned to the client.\n\nNote: password is NEVER returned \u2014 only the encrypted_password column\nexists in the DB, and we never expose that either."
+      },
+      "ConnectionUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 65535.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          },
+          "database_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Database Name"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "ssl_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssl Enabled"
+          }
+        },
+        "type": "object",
+        "title": "ConnectionUpdate",
+        "description": "Update an existing database connection."
+      },
+      "ConversationDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "type": "array",
+            "title": "Messages",
+            "default": []
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "user_id"
+        ],
+        "title": "ConversationDetailOut",
+        "description": "Output model for detailed conversation with messages."
+      },
+      "ConversationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "user_id"
+        ],
+        "title": "ConversationOut",
+        "description": "Output model for a conversation list item."
+      },
+      "FileOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "knowledge_base_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Knowledge Base Id"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "file_type": {
+            "type": "string",
+            "title": "File Type"
+          },
+          "file_size": {
+            "type": "integer",
+            "title": "File Size"
+          },
+          "processing_status": {
+            "type": "string",
+            "title": "Processing Status"
+          },
+          "processing_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Error"
+          },
+          "chunk_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Count",
+            "default": 0
+          },
+          "file_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Metadata"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "knowledge_base_id",
+          "file_name",
+          "file_type",
+          "file_size",
+          "processing_status"
+        ],
+        "title": "FileOut",
+        "description": "Output model for file."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "KnowledgeBaseCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "KnowledgeBaseCreate",
+        "description": "Create a knowledge base."
+      },
+      "KnowledgeBaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "name",
+          "is_active"
+        ],
+        "title": "KnowledgeBaseOut",
+        "description": "Output model for knowledge base."
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "description": "Login request body."
+      },
+      "MessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "parent_message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Message Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "sources_used": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources Used",
+            "default": []
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "role",
+          "content"
+        ],
+        "title": "MessageOut",
+        "description": "Output model for a message in a conversation."
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest",
+        "description": "Refresh token request body."
+      },
+      "SQLResultOut": {
+        "properties": {
+          "generated_sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Sql"
+          },
+          "normalized_sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Sql"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count",
+            "default": 0
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "SQLResultOut",
+        "description": "SQL result schema in chat response."
+      },
+      "SchemaOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "connection_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Id"
+          },
+          "schema_name": {
+            "type": "string",
+            "title": "Schema Name"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableOut"
+            },
+            "type": "array",
+            "title": "Tables",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "connection_id",
+          "schema_name",
+          "is_active"
+        ],
+        "title": "SchemaOut",
+        "description": "Output model for database schema metadata."
+      },
+      "SyncSchemaResponse": {
+        "properties": {
+          "connection_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Id"
+          },
+          "schemas_synced": {
+            "type": "integer",
+            "title": "Schemas Synced"
+          },
+          "tables_synced": {
+            "type": "integer",
+            "title": "Tables Synced"
+          },
+          "columns_synced": {
+            "type": "integer",
+            "title": "Columns Synced"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connection_id",
+          "schemas_synced",
+          "tables_synced",
+          "columns_synced",
+          "message"
+        ],
+        "title": "SyncSchemaResponse",
+        "description": "Response model for schema sync operation."
+      },
+      "TableOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "schema_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Schema Id"
+          },
+          "table_name": {
+            "type": "string",
+            "title": "Table Name"
+          },
+          "table_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Type"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnOut"
+            },
+            "type": "array",
+            "title": "Columns",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "schema_id",
+          "table_name"
+        ],
+        "title": "TableOut",
+        "description": "Output model for database table metadata."
+      },
+      "TablePermissionCreate": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "connection_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Id"
+          },
+          "schema_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Schema Name"
+          },
+          "table_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Table Name"
+          },
+          "access_type": {
+            "type": "string",
+            "pattern": "^(read|write|none)$",
+            "title": "Access Type",
+            "default": "read"
+          },
+          "row_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Filter"
+          },
+          "column_permissions": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnPermissionCreate"
+            },
+            "type": "array",
+            "title": "Column Permissions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "role_id",
+          "connection_id",
+          "schema_name",
+          "table_name"
+        ],
+        "title": "TablePermissionCreate",
+        "description": "Create or update table permission."
+      },
+      "TablePermissionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "role_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Role Id"
+          },
+          "connection_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Id"
+          },
+          "schema_name": {
+            "type": "string",
+            "title": "Schema Name"
+          },
+          "table_name": {
+            "type": "string",
+            "title": "Table Name"
+          },
+          "access_type": {
+            "type": "string",
+            "title": "Access Type"
+          },
+          "row_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Filter"
+          },
+          "column_permissions": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnPermissionOut"
+            },
+            "type": "array",
+            "title": "Column Permissions",
+            "default": []
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role_id",
+          "connection_id",
+          "schema_name",
+          "table_name",
+          "access_type"
+        ],
+        "title": "TablePermissionOut",
+        "description": "Output model for table permission."
+      },
+      "TestResult": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "TestResult",
+        "description": "Result of a connection test."
+      },
+      "Text2SQLRequest": {
+        "properties": {
+          "connection_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Id"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connection_id",
+          "question"
+        ],
+        "title": "Text2SQLRequest",
+        "description": "Request payload for Text-to-SQL query."
+      },
+      "TokenPair": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenPair",
+        "description": "JWT access + refresh token response."
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "email",
+          "username"
+        ],
+        "title": "UserOut",
+        "description": "User information returned from /me and other endpoints."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -28,6 +28,10 @@ FORBIDDEN_SCHEMAS = {
 # Forbidden system/admin functions
 FORBIDDEN_FUNCTIONS = {
     "pg_sleep",
+    "pg_read_file",
+    "pg_read_binary_file",
+    "pg_ls_dir",
+    "pg_stat_file",
     "version",
     "load_file",
     "into_outfile",

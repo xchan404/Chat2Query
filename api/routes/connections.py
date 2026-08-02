@@ -34,8 +34,21 @@ async def create_connection(
     service = ConnectionService(db)
     conn = await service.create_connection(
         tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
         data=data,
     )
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="connection_created",
+        resource_type="database_connection",
+        resource_id=str(conn.id),
+        details={"name": conn.name, "type": conn.database_type, "host": conn.host},
+        description=f"Database connection '{conn.name}' created",
+    )
+    await db.commit()
     return ConnectionOut.model_validate(conn)
 
 
@@ -85,6 +98,17 @@ async def update_connection(
         connection_id=connection_id,
         data=data,
     )
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="connection_updated",
+        resource_type="database_connection",
+        resource_id=str(conn.id),
+        description=f"Database connection '{conn.name}' updated",
+    )
+    await db.commit()
     return ConnectionOut.model_validate(conn)
 
 
@@ -100,6 +124,17 @@ async def delete_connection(
         tenant_id=uuid.UUID(current_user.tenant_id),
         connection_id=connection_id,
     )
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="connection_deleted",
+        resource_type="database_connection",
+        resource_id=str(connection_id),
+        description=f"Database connection '{connection_id}' deleted",
+    )
+    await db.commit()
 
 
 @router.post("/{connection_id}/test", response_model=TestResult)
