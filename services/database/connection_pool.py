@@ -40,7 +40,7 @@ class ConnectionParamCache:
         if entry is None:
             return None
 
-        if time.monotonic() - entry.created_at > self._ttl:
+        if time.monotonic() - entry.created_at >= self._ttl:
             # Expired — remove and return None
             del self._cache[connection_id]
             logger.debug("Cache entry expired", extra={"connection_id": connection_id})

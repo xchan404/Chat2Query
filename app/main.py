@@ -10,6 +10,9 @@ from app.exceptions import register_exception_handlers
 from app.logging_config import setup_logging
 from api.routes.auth import router as auth_router
 from api.routes.connections import router as connections_router
+from api.routes.schemas import router as schemas_router
+from api.routes.permissions import router as permissions_router
+from api.routes.query import router as query_router
 
 # Set up structured JSON logging
 setup_logging()
@@ -44,6 +47,9 @@ def create_app() -> FastAPI:
     # Include routers
     application.include_router(auth_router)
     application.include_router(connections_router)
+    application.include_router(schemas_router)
+    application.include_router(permissions_router)
+    application.include_router(query_router)
 
     # Health check
     @application.get("/api/health", tags=["health"])

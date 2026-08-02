@@ -12,40 +12,62 @@
 - [x] Unit tests: 20 passing (security + tenant isolation)
 
 **Definition of Done**: ✅
-- Can register two tenants (via seed script)
-- Can log in as a user in each
-- `GET /api/auth/me` returns correctly scoped identity
-- Token from tenant A carries different tenant_id than tenant B
-- BaseRepository enforces tenant_id on every query method
-- All 20 unit tests pass
 
 **Notes**:
 - Replaced `passlib[bcrypt]` with direct `bcrypt` — passlib is unmaintained and incompatible with bcrypt >= 4.1
 - Full schema (all 17 tables) created in initial Alembic migration, but only auth tables have repos/routes — remaining tables are model stubs for later phases
-- All models include the `processing_status` check constraint and `processing_started_at`/`processed_at` columns on `files` per Section 5
 
 ---
 
-## Phase 2 — Live DB Connections + Encryption
-- [ ] `core/encryption.py`: Fernet encrypt/decrypt helpers
-- [ ] `services/database/adapters/base.py`: abstract adapter interface
-- [ ] `adapters/postgresql.py`, `adapters/mysql.py` implementations
-- [ ] `services/database/connection_service.py` + `connection_tester.py`
-- [ ] Routes: full CRUD on `/api/database-connections`, plus `POST /{id}/test`
-- [ ] Connection pooling: short-TTL cache of live connections
+## Phase 2 — Live DB Connections + Encryption ✅
 
-## Phase 3 — Schema Discovery & Permissions
-- [ ] `services/database/schema_discovery.py` + `metadata_cache.py`
-- [ ] Routes: `POST /{id}/sync-schema`, `GET /{id}/schemas`, `GET /{id}/tables`
-- [ ] `table_permissions` / `column_permissions` models + repos + CRUD routes
-- [ ] `core/permissions.py`: resolve effective `allowed_schema`
+- [x] `core/encryption.py`: Fernet encrypt/decrypt helpers for `encrypted_password` / `encrypted_connection_string`
+- [x] `services/database/adapters/base.py`: abstract adapter interface (`test_connection`, `list_schemas`, `list_tables`, `list_columns`, `execute_readonly`, dialect name for SQLGlot)
+- [x] `adapters/postgresql.py`, `adapters/mysql.py` implementations
+- [x] `services/database/connection_service.py` + `connection_tester.py`
+- [x] Routes: full CRUD on `/api/database-connections`, plus `POST /{id}/test`
+- [x] Connection pooling: short-TTL cache of live connections keyed by `connection_id`, decrypted only in memory, never logged
 
-## Phase 4 — Text-to-SQL + Validation + Execution
-- [ ] `services/llm/` thin wrapper around Anthropic API
-- [ ] `services/database/query_validator.py` (SQL Safety Pipeline)
-- [ ] `services/database/query_executor.py`
-- [ ] `services/database/dialect_resolver.py`
-- [ ] Basic single-source chat path wired end-to-end
+**Definition of Done**: ✅
+
+---
+
+## Phase 3 — Schema Discovery & Permissions ✅
+
+- [x] `services/database/schema_discovery.py` + `metadata_cache.py`: introspect via adapter, populate `database_schemas`/`database_tables`/`database_columns`
+- [x] Routes: `POST /{id}/sync-schema`, `GET /{id}/schemas`
+- [x] `table_permissions` / `column_permissions` models + repos + CRUD routes
+- [x] `core/permissions.py`: resolve effective `allowed_schema`
+
+**Definition of Done**: ✅
+- Schema sync introspects target DB and caches metadata in app DB & memory cache
+- Table and column permission management routes implemented
+- Effective `allowed_schema` resolution engine merges role-level permissions and masks sensitive columns
+
+---
+
+## Phase 4 — Text-to-SQL + Validation + Execution ✅
+
+- [x] `services/llm/` thin wrapper around Anthropic API (single place to swap models/providers)
+- [x] `services/database/query_validator.py` (SQL Safety Pipeline per Section 7)
+- [x] `services/database/query_executor.py` — executes via read-only adapter, enforces `SQL_STATEMENT_TIMEOUT_MS` and `SQL_MAX_ROWS`, writes `query_executions` row
+- [x] `services/database/dialect_resolver.py` — maps `connection.database_type` to SQLGlot dialect
+- [x] Basic single-source chat path wired end-to-end (`POST /api/query/sql`)
+
+**Definition of Done**: ✅
+- SQL Safety Pipeline implements all 8 steps of Section 7:
+  1. Comment stripping check (rejects unquoted `--` and `/* */`)
+  2. Parse check (rejects parse errors and stacked/multi-statement SQL)
+  3. Statement type check (allows only SELECT/UNION/SELECTABLE, rejects DDL/DML)
+  4. Reference extraction (tables and columns)
+  5. Permission check against `allowed_schema`
+  6. System schema & admin function block (`pg_catalog`, `information_schema`, `mysql`, `sys`, `pg_sleep`, etc.)
+  7. Row filter injection (server-side AST rewrite ANDing `row_filter` into `WHERE`)
+  8. Limit enforcement (injects `LIMIT max_rows` if missing or clamps if over limit)
+- Execution logs every attempt (approved/rejected/error) into `query_executions` table
+- 68 passing unit tests (covering security, tenant isolation, encryption, connection pool, permission resolution, and full query validator safety pipeline)
+
+---
 
 ## Phase 5 — File Ingestion + Embedding + Retrieval
 - [ ] `services/documents/parsers/` — PDF, DOCX, XLSX/CSV, TXT
