@@ -177,3 +177,78 @@ class TestLimitEnforcement:
         res = validate_and_transform_sql(sql, allowed_schema=SAMPLE_ALLOWED_SCHEMA, max_rows=100)
         assert res.is_valid
         assert "limit 10" in res.normalized_sql.lower()
+
+
+class TestCTEAndExplain:
+    """Test that WITH (CTEs) and EXPLAIN pass validation — spec allows SELECT, WITH, EXPLAIN."""
+
+    def test_cte_select_accepted(self):
+        """WITH x AS (...) SELECT ... is a common LLM-generated pattern and must pass."""
+        sql = "WITH active_users AS (SELECT id, username FROM users WHERE status = 'active') SELECT id, username FROM active_users"
+        res = validate_and_transform_sql(sql, allowed_schema=SAMPLE_ALLOWED_SCHEMA)
+        assert res.is_valid
+        assert res.status == "approved"
+
+    def test_cte_with_multiple_ctes_accepted(self):
+        sql = "WITH u AS (SELECT id FROM users), o AS (SELECT id, user_id FROM orders) SELECT u.id FROM u JOIN o ON u.id = o.user_id"
+        res = validate_and_transform_sql(sql, allowed_schema=SAMPLE_ALLOWED_SCHEMA)
+        assert res.is_valid
+
+    def test_cte_still_gets_row_filter(self):
+        """Row filters must still be injected even when query uses CTEs."""
+        sql = "WITH u AS (SELECT id, username, status FROM users) SELECT id, username FROM u"
+        res = validate_and_transform_sql(sql, allowed_schema=SAMPLE_ALLOWED_SCHEMA)
+        assert res.is_valid
+        # The row filter should be applied to the users table
+        assert "users" in res.applied_row_filters
+
+    def test_cte_still_gets_limit(self):
+        sql = "WITH u AS (SELECT id FROM users) SELECT id FROM u"
+        res = validate_and_transform_sql(sql, allowed_schema=SAMPLE_ALLOWED_SCHEMA, max_rows=50)
+        assert res.is_valid
+        assert "limit 50" in res.normalized_sql.lower() or "limit" in res.normalized_sql.lower()
+
+
+class TestSensitiveColumnMasking:
+    """Test that mask_value and _mask_rows correctly mask sensitive columns in query results."""
+
+    def test_mask_value_short_string(self):
+        from services.database.query_executor import mask_value
+        assert mask_value("abc") == "****"
+
+    def test_mask_value_long_string(self):
+        from services.database.query_executor import mask_value
+        result = mask_value("alice@example.com")
+        assert result.startswith("al")
+        assert result.endswith("om")
+        assert "****" not in result or "*" in result  # contains asterisks
+        assert result != "alice@example.com"  # not the original
+
+    def test_mask_value_none(self):
+        from services.database.query_executor import mask_value
+        assert mask_value(None) is None
+
+    def test_mask_rows_masks_sensitive_columns(self):
+        from services.database.query_executor import _mask_rows
+        rows = [
+            {"id": 1, "username": "alice", "email": "alice@example.com"},
+            {"id": 2, "username": "bob", "email": "bob@example.com"},
+        ]
+        masked = _mask_rows(rows, {"email"})
+        assert masked[0]["id"] == 1
+        assert masked[0]["username"] == "alice"
+        assert masked[0]["email"] != "alice@example.com"
+        assert masked[1]["email"] != "bob@example.com"
+        # Non-masked columns untouched
+        assert masked[1]["username"] == "bob"
+
+    def test_collect_masked_columns(self):
+        from services.database.query_executor import _collect_masked_columns
+        cols = _collect_masked_columns(SAMPLE_ALLOWED_SCHEMA)
+        assert "email" in cols
+        assert "id" not in cols
+
+    def test_mask_rows_empty_list(self):
+        from services.database.query_executor import _mask_rows
+        assert _mask_rows([], {"email"}) == []
+

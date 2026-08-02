@@ -38,3 +38,17 @@ async def get_schemas(
         tenant_id=uuid.UUID(current_user.tenant_id),
         connection_id=connection_id,
     )
+
+
+@router.get("/{connection_id}/tables", response_model=list[SchemaOut])
+async def get_tables(
+    connection_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SchemaOut]:
+    """Get discovered tables (nested under schemas) for a connection."""
+    service = SchemaDiscoveryService(db)
+    return await service.get_schemas(
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        connection_id=connection_id,
+    )

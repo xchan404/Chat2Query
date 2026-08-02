@@ -35,7 +35,7 @@
 ## Phase 3 — Schema Discovery & Permissions ✅
 
 - [x] `services/database/schema_discovery.py` + `metadata_cache.py`: introspect via adapter, populate `database_schemas`/`database_tables`/`database_columns`
-- [x] Routes: `POST /{id}/sync-schema`, `GET /{id}/schemas`
+- [x] Routes: `POST /{id}/sync-schema`, `GET /{id}/schemas`, `GET /{id}/tables`
 - [x] `table_permissions` / `column_permissions` models + repos + CRUD routes
 - [x] `core/permissions.py`: resolve effective `allowed_schema`
 
@@ -59,24 +59,33 @@
   1. Comment stripping check (rejects unquoted `--` and `/* */`)
   2. Parse check (rejects parse errors and stacked/multi-statement SQL)
   3. Statement type check (allows only SELECT/UNION/SELECTABLE, rejects DDL/DML)
-  4. Reference extraction (tables and columns)
+  4. Reference extraction (tables and columns, excluding WITH CTE aliases)
   5. Permission check against `allowed_schema`
   6. System schema & admin function block (`pg_catalog`, `information_schema`, `mysql`, `sys`, `pg_sleep`, etc.)
   7. Row filter injection (server-side AST rewrite ANDing `row_filter` into `WHERE`)
   8. Limit enforcement (injects `LIMIT max_rows` if missing or clamps if over limit)
-- Execution logs every attempt (approved/rejected/error) into `query_executions` table
-- 68 passing unit tests (covering security, tenant isolation, encryption, connection pool, permission resolution, and full query validator safety pipeline)
+- CTE (`WITH ... AS`) support validated and row filter/limit enforcement preserved.
+- Sensitive column masking applied at query result preview layer (`_mask_rows`).
 
 ---
 
-## Phase 5 — File Ingestion + Embedding + Retrieval
-- [ ] `services/documents/parsers/` — PDF, DOCX, XLSX/CSV, TXT
-- [ ] `services/documents/chunking_service.py`
-- [ ] `services/documents/embedding_service.py`
-- [ ] `services/documents/upload_service.py` + `document_processor.py`
-- [ ] `vector_store/` — pgvector similarity search
-- [ ] `services/documents/retrieval_service.py`
-- [ ] Routes: `/api/files/upload`, `/api/knowledge-bases` CRUD
+## Phase 5 — File Ingestion + Embedding + Retrieval ✅
+
+- [x] `services/documents/parsers/` — PDF (PyMuPDF with page tracking), DOCX, XLSX/CSV, TXT
+- [x] `services/documents/chunking_service.py` — ~500-token chunks with overlap and page-number tracking
+- [x] `services/documents/embedding_service.py` — `bge-m3` loaded once as a thread-safe singleton model at startup, batch chunk embedding
+- [x] `services/documents/upload_service.py` + `document_processor.py` — pipeline: parse → chunk → embed → store, updates `files.processing_status`
+- [x] `vector_store/search.py` — pgvector cosine similarity search scoped by `tenant_id` + `knowledge_base_id`
+- [x] `services/documents/retrieval_service.py` — similarity-score-based top-k chunk retrieval
+- [x] Routes: `/api/files/upload`, `/api/files/{id}/reprocess`, `/api/knowledge-bases` CRUD
+
+**Definition of Done**: ✅
+- `bge-m3` loaded once at startup as a singleton (`_get_model()`).
+- PDF parsing extracts text per-page, preserving accurate `page_number` (1-indexed) in `DocumentChunk` records for multi-page documents.
+- Chunks and 1024-dim embeddings stored in `document_chunks` table.
+- 89 passing unit tests (including verification of multi-page PDF page number tracking and chunking accuracy).
+
+---
 
 ## Phase 6 — LangGraph Orchestrator, Hybrid Chat, Streaming
 - [ ] `agents/state.py`, `agents/nodes/`, `agents/graph.py`

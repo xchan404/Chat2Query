@@ -186,6 +186,13 @@ def validate_and_transform_sql(
         if func_name in FORBIDDEN_FUNCTIONS:
             errors.append(f"Forbidden system function call: '{func_node.name}'")
 
+    # Collect CTE (WITH clause) names — these are virtual table aliases, not real tables
+    cte_names: set[str] = set()
+    for cte_node in ast.find_all(exp.CTE):
+        alias = cte_node.alias
+        if alias:
+            cte_names.add(alias.lower())
+
     # Step 4: Reference extraction
     ref_tables: set[str] = set()
     ref_columns: set[str] = set()
@@ -193,6 +200,11 @@ def validate_and_transform_sql(
     for table_node in ast.find_all(exp.Table):
         schema_name = table_node.db or ""
         table_name = table_node.name
+
+        # Skip CTE aliases — they're not real tables
+        if table_name.lower() in cte_names:
+            continue
+
         full_table = f"{schema_name}.{table_name}" if schema_name else table_name
         ref_tables.add(full_table)
 
@@ -222,6 +234,10 @@ def validate_and_transform_sql(
         for table_node in ast.find_all(exp.Table):
             t_schema = (table_node.db or "").lower()
             t_name = table_node.name.lower()
+
+            # Skip CTE aliases
+            if t_name in cte_names:
+                continue
 
             # Find matching schema in allowed_schema
             matched_schema = None

@@ -29,6 +29,31 @@ def mask_value(val: Any) -> str:
     return s[:2] + "*" * (len(s) - 4) + s[-2:]
 
 
+def _collect_masked_columns(allowed_schema: dict[str, Any]) -> set[str]:
+    """Collect the set of column names marked as masked across all permitted tables."""
+    masked: set[str] = set()
+    schemas = allowed_schema.get("schemas", {})
+    for s_data in schemas.values():
+        for t_data in s_data.get("tables", {}).values():
+            for col_name in t_data.get("masked_columns", []):
+                masked.add(col_name.lower())
+    return masked
+
+
+def _mask_rows(rows: list[dict[str, Any]], masked_cols: set[str]) -> list[dict[str, Any]]:
+    """Apply mask_value to any column whose name is in masked_cols."""
+    masked_rows = []
+    for row in rows:
+        new_row = {}
+        for k, v in row.items():
+            if k.lower() in masked_cols:
+                new_row[k] = mask_value(v)
+            else:
+                new_row[k] = v
+        masked_rows.append(new_row)
+    return masked_rows
+
+
 class QueryExecutor:
     """Service to validate, execute, and record SQL query attempts."""
 
@@ -103,6 +128,11 @@ class QueryExecutor:
                 timeout_ms=settings.SQL_STATEMENT_TIMEOUT_MS,
             )
             elapsed_ms = (time.monotonic() - start_time) * 1000
+
+            # Mask sensitive columns in result rows (Section 8 requirement)
+            masked_columns = _collect_masked_columns(allowed_schema)
+            if masked_columns:
+                rows = _mask_rows(rows, masked_columns)
 
             execution_record.row_count = count
             execution_record.execution_time_ms = elapsed_ms
