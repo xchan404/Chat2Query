@@ -1,0 +1,38 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+
+# Database
+sqlalchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+alembic>=1.13.0
+
+# Configuration
+pydantic-settings>=2.3.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
+
+# Redis
+redis>=5.0.0
+
+# Encryption
+cryptography>=42.0.0
+
+# SQL parsing (Phase 4, but listed now to avoid conflicts)
+sqlglot>=25.0.0
+
+# HTTP client
+httpx>=0.27.0
+
+# Logging
+python-json-logger>=2.0.0
+
+# Testing
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+
+# pgvector (Phase 5, but needed for migration)
+pgvector>=0.3.0
