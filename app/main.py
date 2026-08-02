@@ -15,6 +15,10 @@ from api.routes.permissions import router as permissions_router
 from api.routes.query import router as query_router
 from api.routes.knowledge_bases import router as kb_router
 from api.routes.files import router as files_router
+from api.routes.chat import router as chat_router
+from api.routes.conversations import router as conversations_router
+from api.routes.messages import router as messages_router
+from api.routes.audit_logs import router as audit_logs_router
 
 # Set up structured JSON logging
 setup_logging()
@@ -54,6 +58,10 @@ def create_app() -> FastAPI:
     application.include_router(query_router)
     application.include_router(kb_router)
     application.include_router(files_router)
+    application.include_router(chat_router)
+    application.include_router(conversations_router)
+    application.include_router(messages_router)
+    application.include_router(audit_logs_router)
 
     # Health check
     @application.get("/api/health", tags=["health"])

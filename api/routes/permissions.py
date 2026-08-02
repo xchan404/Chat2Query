@@ -41,6 +41,18 @@ async def create_table_permission(
         tp.column_permissions.append(cp)
 
     saved = await repo.create_or_update_table_permission(tp)
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="permission_created",
+        resource_type="table_permission",
+        resource_id=str(saved.id),
+        details={"schema": data.schema_name, "table": data.table_name, "role_id": str(data.role_id)},
+        description=f"Permission created for {data.schema_name}.{data.table_name}",
+    )
+    await db.commit()
     return TablePermissionOut.model_validate(saved)
 
 
@@ -67,3 +79,15 @@ async def delete_table_permission(
     deleted = await repo.delete_table_permission(permission_id)
     if not deleted:
         raise NotFoundError("Table permission not found")
+
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="permission_deleted",
+        resource_type="table_permission",
+        resource_id=str(permission_id),
+        description=f"Permission '{permission_id}' deleted",
+    )
+    await db.commit()

@@ -123,6 +123,19 @@ async def test_connection_endpoint(
         params=params,
     )
 
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="connection_tested",
+        resource_type="database_connection",
+        resource_id=str(connection_id),
+        details={"success": success, "latency_ms": latency_ms},
+        description=f"Database connection '{conn.name}' tested: {message}",
+    )
+    await db.commit()
+
     return TestResult(
         success=success,
         message=message,

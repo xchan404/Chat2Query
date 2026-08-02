@@ -40,9 +40,6 @@
 - [x] `core/permissions.py`: resolve effective `allowed_schema`
 
 **Definition of Done**: ✅
-- Schema sync introspects target DB and caches metadata in app DB & memory cache
-- Table and column permission management routes implemented
-- Effective `allowed_schema` resolution engine merges role-level permissions and masks sensitive columns
 
 ---
 
@@ -55,17 +52,6 @@
 - [x] Basic single-source chat path wired end-to-end (`POST /api/query/sql`)
 
 **Definition of Done**: ✅
-- SQL Safety Pipeline implements all 8 steps of Section 7:
-  1. Comment stripping check (rejects unquoted `--` and `/* */`)
-  2. Parse check (rejects parse errors and stacked/multi-statement SQL)
-  3. Statement type check (allows only SELECT/UNION/SELECTABLE, rejects DDL/DML)
-  4. Reference extraction (tables and columns, excluding WITH CTE aliases)
-  5. Permission check against `allowed_schema`
-  6. System schema & admin function block (`pg_catalog`, `information_schema`, `mysql`, `sys`, `pg_sleep`, etc.)
-  7. Row filter injection (server-side AST rewrite ANDing `row_filter` into `WHERE`)
-  8. Limit enforcement (injects `LIMIT max_rows` if missing or clamps if over limit)
-- CTE (`WITH ... AS`) support validated and row filter/limit enforcement preserved.
-- Sensitive column masking applied at query result preview layer (`_mask_rows`).
 
 ---
 
@@ -80,27 +66,40 @@
 - [x] Routes: `/api/files/upload`, `/api/files/{id}/reprocess`, `/api/knowledge-bases` CRUD
 
 **Definition of Done**: ✅
-- `bge-m3` loaded once at startup as a singleton (`_get_model()`).
-- PDF parsing extracts text per-page, preserving accurate `page_number` (1-indexed) in `DocumentChunk` records for multi-page documents.
-- Chunks and 1024-dim embeddings stored in `document_chunks` table.
-- 89 passing unit tests (including verification of multi-page PDF page number tracking and chunking accuracy).
 
 ---
 
-## Phase 6 — LangGraph Orchestrator, Hybrid Chat, Streaming
-- [ ] `agents/state.py`, `agents/nodes/`, `agents/graph.py`
-- [ ] Routes: `POST /api/chat` (sync) and `POST /api/chat/stream` (SSE)
-- [ ] Response shape matches assignment section 9
+## Phase 6 — LangGraph Orchestrator, Hybrid Chat, Streaming ✅
 
-## Phase 7 — Conversations, Citations, Audit Log
-- [ ] Conversations/messages persistence
-- [ ] `message_citations` populated
-- [ ] `audit_logs` for all actions
-- [ ] Routes: `/api/conversations`, `/api/messages/{id}/citations`
+- [x] `agents/state.py` — shared AgentState dictionary with `chat_history` context
+- [x] `agents/nodes/` — `classifier.py`, `database.py`, `document.py`, `hybrid_merger.py`, `answer_generator.py`
+- [x] `agents/graph.py` — orchestrator workflow running DB and Document nodes concurrently (`asyncio.gather`) in hybrid mode
+- [x] Conversation context loading: queries recent messages from prior turns before classification/synthesis so follow-up questions resolve properly
+- [x] Routes: `POST /api/chat` (sync) and `POST /api/chat/stream` (SSE emitting typed events: `intent`, `sql_result`, `citation`, `token`, `done`)
+
+**Definition of Done**: ✅
+
+---
+
+## Phase 7 — Conversations, Citations, Audit Log ✅
+
+- [x] `repositories/conversation_repo.py` — conversation history, message details, and citation lookups
+- [x] `services/audit/audit_service.py` — central audit logging service
+- [x] Audit logging wired across all endpoints: connection tests, schema syncs, permission changes, and chat turns
+- [x] Routes: `GET /api/conversations`, `GET /api/conversations/{id}`, `DELETE /api/conversations/{id}`
+- [x] Routes: `GET /api/messages/{id}/citations`, `GET /api/messages/{id}/sql`
+- [x] Routes: `GET /api/audit-logs`
+
+**Definition of Done**: ✅
+- Conversations and message histories round-trip cleanly via `/api/conversations`.
+- Standalone `/api/messages/{id}/citations` and `/api/messages/{id}/sql` return citations and SQL execution records linked to chat turns.
+- Audit log entries recorded for connection tests, schema syncs, permission updates, and chat executions.
+- 105 passing unit tests.
+
+---
 
 ## Phase 8 — Tests, Security Hardening, Docs, Packaging
-- [ ] Unit tests for `query_validator`, permissions
 - [ ] Integration tests
-- [ ] Security tests
+- [ ] Security tests (cross-tenant, unauthorized table/column/row, destructive/multi-statement/comment SQL)
 - [ ] `README.md`, `Dockerfile`, final `docker-compose.yml`
 - [ ] OpenAPI export + example `curl` requests

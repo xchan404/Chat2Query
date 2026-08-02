@@ -20,10 +20,23 @@ async def sync_schema(
 ) -> SyncSchemaResponse:
     """Introspect database schema via connection adapter and cache metadata."""
     service = SchemaDiscoveryService(db)
-    return await service.sync_schema(
+    res = await service.sync_schema(
         tenant_id=uuid.UUID(current_user.tenant_id),
         connection_id=connection_id,
     )
+    from services.audit.audit_service import log_audit_event
+    await log_audit_event(
+        session=db,
+        tenant_id=uuid.UUID(current_user.tenant_id),
+        user_id=uuid.UUID(current_user.user_id),
+        action="schema_synced",
+        resource_type="database_connection",
+        resource_id=str(connection_id),
+        details={"schemas_synced": res.schemas_synced, "tables_synced": res.tables_synced},
+        description=f"Schema synced for connection '{connection_id}'",
+    )
+    await db.commit()
+    return res
 
 
 @router.get("/{connection_id}/schemas", response_model=list[SchemaOut])
