@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 const navItems = [
   { href: "/chat", label: "1. Chat & Evidence", num: "01" },
@@ -14,15 +15,16 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <aside className="bg-surface border-r-thick border-ink-dark flex flex-col p-4 gap-5 w-60 shrink-0">
       <div className="bg-yellow-bg border-med border-ink-dark p-2.5 shadow-sm border-t-4 border-t-yellow-signal">
         <div className="font-display font-extrabold text-xs tracking-wider uppercase">
-          Acme Industrial
+          {user?.username ?? "—"}
         </div>
         <div className="font-mono text-[11px] text-ink-muted mt-0.5">
-          ID: e8f410a2-99c0
+          ID: {user?.id?.slice(0, 13) ?? "—"}
         </div>
       </div>
 
