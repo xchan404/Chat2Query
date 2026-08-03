@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Public+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700;800&display=swap');
+@import "tailwindcss";
+
+@config "../tailwind.config.ts";
+
+:root {
+  --bg-paper: #F8F5EE;
+  --bg-surface: #EDE7DC;
+  --bg-surface-alt: #E2DAD0;
+  --ink-dark: #0F1419;
+  --ink-muted: #4F5863;
+  
+  --yellow-signal: #FFD600;
+  --yellow-bg: #FFFBE6;
+  --cobalt-signal: #0047AB;
+  --cobalt-bg: #EFF5FF;
+  --purple-signal: #7C3AED;
+  --purple-bg: #F5F3FF;
+  --cyan-signal: #0284C7;
+  --cyan-bg: #F0F9FF;
+  --rust-warn: #DC2626;
+  --rust-bg: #FEF2F2;
+  --emerald-pass: #16A34A;
+  --emerald-bg: #F0FDF4;
+  
+  --code-bg: #0F172A;
+  --code-fg: #F8FAFC;
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --border-thick: 3px solid var(--ink-dark);
+  --border-med: 2px solid var(--ink-dark);
+  --border-thin: 1px solid var(--ink-dark);
+  
+  --shadow-hard: 4px 4px 0px var(--ink-dark);
+  --shadow-sm: 2px 2px 0px var(--ink-dark);
+  --shadow-yellow: 4px 4px 0px var(--yellow-signal);
+  --shadow-cobalt: 4px 4px 0px var(--cobalt-signal);
+  --shadow-purple: 4px 4px 0px var(--purple-signal);
+}
+
+/* Strict Zero Border Radius Constraint */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 0px !important;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-paper);
+  color: var(--ink-dark);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: var(--border-med);
+}
+
+/* Visible Focus Floor */
+*:focus-visible {
+  outline: 3px solid var(--cobalt-signal) !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

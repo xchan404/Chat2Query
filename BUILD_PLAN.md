@@ -350,113 +350,15 @@ Reuse this pattern for each remaining phase, always pointing back at the relevan
 
 ---
 
-## 13. Frontend — Design System & Build Plan
+## 13. Frontend
 
-A mockup implementing this system is in `frontend-mockup.html` (open it directly in a browser —
-it's a real, interactive static prototype, not a screenshot). Everything below documents the
-decisions behind it so the agent building the real frontend stays consistent.
+Frontend planning has moved to a dedicated document: **`FRONTEND_BUILD_PLAN.md`**.
 
-### 13.1 Design philosophy
+The frontend grew into a project of its own (design tokens pivoted from the original ink-blue
+mockup to a brutalist direction, plus its own 8-phase build sequence, its own test plan, its
+own deliverables) — keeping it in this file risked exactly the kind of drift this whole build
+has spent eight rounds learning to avoid. See that document for the design system, API
+integration map, component inventory, build phases (F1-F8), and kickoff prompts.
 
-The obvious default for this product is a centered chat column that looks like every other AI
-wrapper — bubbles, a purple accent, a single stream of prose you have to trust blindly. That's
-wrong for this specific product: the entire value proposition is *auditability*. Every answer is
-either a validated SQL execution or a cited document chunk, and the spec requires both to be
-traceable. So the UI should look less like a chatbot and more like a **data control room** — an
-instrument panel where every reading is backed by a visible source, not a hidden one.
-
-**Signature element — the evidence rail**: a persistent right-hand panel, always visible (not a
-modal, not a "sources" link you have to click), that shows the live SQL query, its execution time
-and row count, and the exact document excerpt with page number, updating in real time as the
-conversation progresses. This isn't decoration — it's the direct visual expression of the
-platform's core requirement ("the LLM cannot bypass access controls," "every answer traceable to
-execution records and/or chunks"). Nothing about the layout works without it.
-
-Secondary signature detail: small corner-bracket marks on evidence cards (like calibration marks
-on an instrument reading) — reinforces "this is a measurement, not a claim."
-
-### 13.2 Design tokens
-
-```css
---ink-0:  #12181F;  /* page background */
---ink-1:  #1A222C;  /* panel surface (sidebar, rail) */
---ink-2:  #212B37;  /* elevated / hover surface */
---ink-3:  #2A3542;  /* nested elevation */
---line:   #2E3947;  /* default hairline border */
---line-strong: #3C4957;
-
---text-hi:  #E8EAED;  /* primary text */
---text-mid: #A7B0BD;  /* secondary text */
---text-low: #6B7684;  /* muted / metadata / timestamps */
-
---amber: #E8A33D;   /* evidence / hybrid / verified — the accent */
---cyan:  #5CB2C2;   /* database-sourced content, structural elements */
---sage:  #7DB989;   /* success / connected / validated states */
---brick: #DB6156;   /* error / denied / blocked states */
-
---font-display: 'IBM Plex Mono';  /* headers, labels, SQL, data, timestamps */
---font-body:    'IBM Plex Sans';  /* prose, chat text, descriptions */
---radius: 6px;
-```
-
-Rationale: dark ink-blue base (not pure black) reads as "operations," not "sci-fi AI." Mono type
-for structure/headers (not just code) is the one deliberate typographic risk — it signals
-"instrument," not "chat app," on sight. Amber is reserved for evidence/verified states only —
-resist the urge to use it as a general brand color, or it stops meaning anything. This palette
-intentionally avoids the three patterns that read as "generic AI-generated design": warm
-cream + terracotta, black + acid-green/neon, and broadsheet hairline-newspaper layouts.
-
-### 13.3 Information architecture
-
-| Screen | Purpose |
-|---|---|
-| Login / tenant select | Auth, then land in the last-used or default tenant |
-| **Chat** (default) | Conversation + persistent evidence rail — the core screen |
-| Connections | CRUD + test + schema sync for live DB connections |
-| Knowledge bases | Upload, processing status, per-KB file management |
-| Permissions | Table/column grant matrix per role, row-filter display |
-| Audit log | Searchable/filterable action log |
-
-Layout shell: fixed left nav (workspace switcher + 5 sections) + main content + evidence rail
-(chat only — other screens use the freed width). Top bar carries active connection/KB scope
-chips and the command palette trigger (Ctrl/Cmd+K) — quick-jump between sections and actions
-without hunting through nav, since operators will live in this tool all day.
-
-### 13.4 Frontend tech stack
-
-- **Framework**: Next.js (App Router) + TypeScript — matches your UniHub stack, minimal new tooling
-- **Styling**: Tailwind CSS, configured with the tokens above as custom theme values (not inline hex)
-- **Component primitives**: Radix UI (unstyled, accessible) or shadcn/ui as a base, restyled to the token system — don't hand-roll dialogs/dropdowns/toggles from scratch, accessibility is easy to get wrong
-- **Data/streaming**: native `EventSource` (or a small wrapper) for `/api/chat/stream`; TanStack Query for everything else (connections, files, permissions, audit — all standard REST CRUD)
-- **SQL syntax highlighting**: Shiki or `react-syntax-highlighter`
-- **State**: Zustand for UI-local state (active view, command palette open/closed, evidence rail contents); TanStack Query owns server state — don't duplicate server data into Zustand
-- **Icons**: keep the restrained approach from the mockup (dots, corner brackets, minimal geometric marks) rather than importing a big icon library — it's part of the visual identity, not a gap to fill
-
-### 13.5 Component inventory
-
-`Sidebar`, `TopBar` (scope chips + command trigger), `CommandPalette`, `MessageThread`,
-`MessageRow` (variant: db / document / hybrid, driven by `sources_used` from the chat response),
-`Composer`, `EvidenceRail`, `SqlEvidenceCard`, `CitationEvidenceCard`, `ConnectionCard`,
-`ConnectionTestButton` (owns its own pending/success/error state), `FileCard`, `UploadDropzone`,
-`PermissionMatrix`, `PermissionToggle`, `AuditLogRow`, `StatusPill` (ok/warn/err variants used
-everywhere — connections, files, audit — one component, not reimplemented per screen).
-
-### 13.6 Frontend build phases
-
-Run these alongside or after the matching backend phase — each depends on its backend API existing.
-
-- [ ] **F1 — Shell**: Next.js scaffold, Tailwind theme from tokens, `Sidebar` + `TopBar` + routing between the 5 views, `CommandPalette` (client-only, no backend yet). *DoD: navigating between sections works, matches the mockup visually.*
-- [ ] **F2 — Auth**: login screen, tenant context (React context/provider reading the JWT), protected routes. *DoD: can log in against Phase 1 backend, wrong credentials show an inline error, not a redirect loop.*
-- [ ] **F3 — Connections**: `ConnectionCard` grid wired to real CRUD + test endpoint, schema browser (simple tree, expandable). *DoD: create/test/delete a real connection through the UI.*
-- [ ] **F4 — Chat + evidence rail**: `MessageThread`, `Composer`, SSE streaming into message text, `EvidenceRail` populated from the real `sql`/`citations` response fields. *DoD: the invoice/contract hybrid example works end-to-end through the real UI, not the mockup's fake data.*
-- [ ] **F5 — Knowledge bases**: upload flow with real progress/processing-status polling, `FileCard` reflecting real `processing_status` values. *DoD: upload a real PDF, watch it move from pending → processing → indexed in the UI without a manual refresh.*
-- [ ] **F6 — Permissions**: `PermissionMatrix` wired to real table/column permission endpoints, per-role. *DoD: toggling a permission in the UI actually changes what that role's chat queries can touch.*
-- [ ] **F7 — Audit log**: filterable/searchable log view. *DoD: an action taken anywhere in the app (test connection, upload file, send chat) shows up here within the session.*
-- [ ] **F8 — Polish pass**: keyboard focus visibility, `prefers-reduced-motion` respected, mobile breakpoint (sidebar collapses, evidence rail becomes a slide-over — see the mockup's `@media (max-width: 860px)` block for the pattern), loading/empty/error states for every list view.
-
-### 13.7 Accessibility & responsive floor (non-negotiable, not a stretch goal)
-
-- Every interactive element keyboard-reachable, visible focus ring (the mockup uses `outline: 2px solid var(--amber)`)
-- Color is never the only signal — status pills carry text ("Connected", not just a colored dot), evidence card type is labeled, not just colored
-- `prefers-reduced-motion` disables the streaming-text and transition effects
-- Mobile: sidebar → icon-only rail, evidence rail → slide-over drawer with a toggle (exact CSS pattern in the mockup)
+Progress is still tracked in the shared `PROGRESS.md`, under a new Frontend section alongside
+the backend's Phase 1-8 entries.

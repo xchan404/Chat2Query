@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Chat2Query // Enterprise Data Audit & Control Room",
+  description: "Multi-Tenant Text-to-SQL & Document Chat Platform",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className="antialiased bg-paper text-ink-dark">
+        {children}
+      </body>
+    </html>
+  );
+}

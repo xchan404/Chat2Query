@@ -21,7 +21,7 @@ class LLMClient:
     def __init__(self, api_key: str | None = None):
         settings = get_settings()
         self.api_key = api_key or settings.ANTHROPIC_API_KEY
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-haiku-4-5"
 
     async def generate_sql(
         self,
@@ -43,7 +43,8 @@ Instructions:
 1. Generate a single, syntactically valid read-only SQL query (SELECT statement only).
 2. DO NOT use multi-statements or comments.
 3. Only reference schemas, tables, and columns explicitly present in the provided schema.
-4. Output ONLY the raw SQL statement inside ```sql ... ``` codeblock without any explanation.
+4. AGGREGATION RULE: If the user asks for totals, sums, counts, averages, or statistics (e.g., "total sum", "how many", "average amount"), use appropriate SQL aggregate functions such as SUM(), COUNT(), AVG(), or GROUP BY. Do NOT perform a simple row scan when an aggregate calculation is requested.
+5. Output ONLY the raw SQL statement inside ```sql ... ``` codeblock without any explanation.
 """
 
         if not self.api_key:
@@ -81,7 +82,7 @@ Instructions:
     def _fallback_sql_generator(
         self, question: str, allowed_schema: dict[str, Any]
     ) -> str:
-        """Heuristic fallback when API key is missing (for local testing/demos)."""
+        """Heuristic fallback when API key is missing or API call fails."""
         schemas = allowed_schema.get("schemas", {})
         if not schemas:
             return "SELECT 1"
@@ -92,7 +93,21 @@ Instructions:
             return "SELECT 1"
 
         first_table_name = list(tables.keys())[0]
-        columns = tables[first_table_name].get("columns", ["*"])
+        tbl_info = tables[first_table_name]
+        columns = tbl_info.get("columns", ["*"]) if isinstance(tbl_info, dict) else tbl_info
+
+        q_lower = question.lower()
+        if any(w in q_lower for w in ["avg", "average"]):
+            num_col = next((c for c in columns if "amount" in c or "val" in c), columns[0] if columns else "*")
+            return f"SELECT AVG({num_col}) AS average_amount FROM {first_table_name}"
+        elif any(w in q_lower for w in ["count", "how many", "number of"]):
+            return f"SELECT COUNT(*) AS total_count FROM {first_table_name}"
+        elif any(w in q_lower for w in ["total", "sum", "revenue"]):
+            num_col = next((c for c in columns if "amount" in c or "total" in c or "val" in c), columns[0] if columns else "*")
+            return f"SELECT SUM({num_col}) AS total_amount FROM {first_table_name}"
+        elif "amount" in q_lower:
+            num_col = next((c for c in columns if "amount" in c or "total" in c or "val" in c), columns[0] if columns else "*")
+            return f"SELECT SUM({num_col}) AS total_amount FROM {first_table_name}"
 
         cols_str = ", ".join(columns[:5]) if columns else "*"
         return f"SELECT {cols_str} FROM {first_table_name} LIMIT 10"

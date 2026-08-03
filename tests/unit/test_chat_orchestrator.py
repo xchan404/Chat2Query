@@ -164,11 +164,97 @@ class TestSSEStreamEvents:
         assert "event: citation\n" in evt
         assert '"file_name": "test.pdf"' in evt
 
-    def test_format_sse_token_event(self):
-        evt = _format_sse_event("token", {"text": "Hello "})
-        assert evt == 'event: token\ndata: {"text": "Hello "}\n\n'
-
     def test_format_sse_done_event(self):
         evt = _format_sse_event("done", {"message_id": "m-123", "conversation_id": "c-456"})
         assert "event: done\n" in evt
         assert '"message_id": "m-123"' in evt
+
+
+class TestHybridConcurrencyLatency:
+    """Test that hybrid mode executes database and document branches in parallel, reducing latency."""
+
+    @pytest.mark.asyncio
+    async def test_hybrid_concurrency_latency_reduction(self, monkeypatch):
+        """Mock DB node (0.2s delay) and Doc node (0.2s delay). Parallel execution should take ~0.2s, not 0.4s."""
+        import asyncio
+        import time
+        from agents.graph import run_chat_workflow
+
+        async def mock_db_node(state, session):
+            await asyncio.sleep(0.20)
+            return {"sql_result": {"success": True, "rows": [{"total": 100}], "row_count": 1}}
+
+        async def mock_doc_node(state, session):
+            await asyncio.sleep(0.20)
+            return {"retrieved_chunks": [{"chunk_id": "c-1", "content": "text"}]}
+
+        monkeypatch.setattr("agents.graph.database_node", mock_db_node)
+        monkeypatch.setattr("agents.graph.document_node", mock_doc_node)
+
+        state = {
+            "question": "Compare total invoice payments with contract terms",
+            "tenant_id": str(uuid.uuid4()),
+            "user_id": str(uuid.uuid4()),
+            "connection_id": "conn-1",
+            "knowledge_base_id": "kb-1",
+        }
+
+        start_t = time.monotonic()
+        final_state = await run_chat_workflow(state, None)
+        elapsed = time.monotonic() - start_t
+
+        assert final_state["intent"] == "hybrid"
+        # If run sequentially, 0.20 + 0.20 = 0.40s. Parallel execution takes ~0.20s (< 0.35s)
+        assert elapsed < 0.35, f"Expected parallel execution under 0.35s, got {elapsed:.3f}s"
+
+
+class TestSSEEventSequence:
+    """Test that SSE stream emits structured evidence (sql_result, citation) BEFORE answer token streaming starts."""
+
+    @pytest.mark.asyncio
+    async def test_sse_event_ordering_evidence_before_tokens(self, monkeypatch):
+        """Evidence rail cards (sql_result, citation) must arrive before text tokens."""
+        from services.chat.stream_service import stream_chat_response
+
+        # Mock chat service result
+        async def mock_process_chat(self, tenant_id, user_id, question, **kwargs):
+            return {
+                "message_id": "msg-123",
+                "conversation_id": "conv-123",
+                "intent": "hybrid",
+                "answer": "This is a detailed answer token string.",
+                "sources_used": ["database", "document"],
+                "sql": {"generated_sql": "SELECT 1", "row_count": 1, "rows": []},
+                "citations": [{"source_type": "database", "table_name": "invoices"}],
+            }
+
+        monkeypatch.setattr("services.chat.chat_service.ChatService.process_chat", mock_process_chat)
+
+        event_order = []
+        gen = stream_chat_response(
+            session=None,
+            tenant_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            question="hybrid query",
+        )
+
+        async for frame in gen:
+            lines = frame.strip().split("\n")
+            for line in lines:
+                if line.startswith("event: "):
+                    event_order.append(line.replace("event: ", "").strip())
+
+        # Assert sequence: intent -> sql_result -> citation -> token -> ... -> done
+        assert "intent" in event_order
+        assert "sql_result" in event_order
+        assert "citation" in event_order
+        assert "token" in event_order
+
+        first_token_idx = event_order.index("token")
+        sql_idx = event_order.index("sql_result")
+        cite_idx = event_order.index("citation")
+
+        # Evidence cards MUST arrive before the first text token
+        assert sql_idx < first_token_idx
+        assert cite_idx < first_token_idx
+

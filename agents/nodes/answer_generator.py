@@ -30,7 +30,7 @@ async def answer_generator_node(state: AgentState) -> dict[str, Any]:
     # Process Database citations & sources
     if sql_result and sql_result.get("success"):
         sources_used.append("database")
-        exec_id = sql_result.get("execution_id")
+        exec_id = sql_result.get("execution_id") or sql_result.get("query_execution_id")
         norm_sql = sql_result.get("normalized_sql", "")
 
         # Extract table names from normalized SQL or result
@@ -47,12 +47,12 @@ async def answer_generator_node(state: AgentState) -> dict[str, Any]:
     if retrieved_chunks:
         sources_used.append("document")
         for chunk in retrieved_chunks:
-            fname = chunk.get("metadata", {}).get("file_name", "document")
+            fname = chunk.get("file_name") or chunk.get("metadata", {}).get("file_name") or "document"
             page_no = chunk.get("page_number")
             chunk_id = chunk.get("chunk_id")
             content = chunk.get("content", "")
             snippet = content[:200] + "..." if len(content) > 200 else content
-            sim_score = chunk.get("similarity_score")
+            sim_score = chunk.get("relevance_score") if chunk.get("relevance_score") is not None else chunk.get("similarity_score")
 
             citations.append({
                 "source_type": "document",
@@ -102,7 +102,7 @@ async def answer_generator_node(state: AgentState) -> dict[str, Any]:
                         "content-type": "application/json",
                     },
                     json={
-                        "model": "claude-3-5-sonnet-20241022",
+                        "model": "claude-haiku-4-5",
                         "max_tokens": 512,
                         "system": sys_prompt,
                         "messages": [{"role": "user", "content": user_prompt}],
@@ -119,7 +119,7 @@ async def answer_generator_node(state: AgentState) -> dict[str, Any]:
         if sql_result and sql_result.get("success"):
             rows = sql_result.get("rows", [])
             count = sql_result.get("row_count", 0)
-            answer_parts.append(f"Database query executed successfully. Found {count} row(s). Data preview: {json.dumps(rows[:3])}")
+            answer_parts.append(f"Database query executed successfully. Found {count} row(s). Data preview: {json.dumps(rows[:3], default=str)}")
         elif sql_result and not sql_result.get("success"):
             errs = ", ".join(sql_result.get("errors", []))
             answer_parts.append(f"Database query could not be executed: {errs}")
