@@ -15,6 +15,11 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+class LLMError(Exception):
+    """Custom exception for LLM generation failures."""
+    pass
+
+
 class LLMClient:
     """Thin Anthropic LLM client wrapper."""
 
@@ -48,8 +53,7 @@ Instructions:
 """
 
         if not self.api_key:
-            logger.warning("ANTHROPIC_API_KEY not configured — using fallback mock SQL generator")
-            return self._fallback_sql_generator(question, allowed_schema)
+            raise LLMError("ANTHROPIC_API_KEY is not configured. Please add it to your environment variables.")
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -66,6 +70,17 @@ Instructions:
                         "messages": [{"role": "user", "content": prompt}],
                     },
                 )
+                
+                # Check for HTTP errors (e.g., 400 Out of Credits, 401 Unauthorized)
+                if response.status_code != 200:
+                    try:
+                        error_data = response.json()
+                        error_message = error_data.get("error", {}).get("message", response.text)
+                    except Exception:
+                        error_message = response.text
+                    
+                    raise LLMError(f"Anthropic API Error ({response.status_code}): {error_message}")
+                
                 response.raise_for_status()
                 data = response.json()
                 content = data["content"][0]["text"]
@@ -75,42 +90,11 @@ Instructions:
                 if match:
                     return match.group(1).strip()
                 return content.strip()
+        except LLMError:
+            raise
         except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
-            return self._fallback_sql_generator(question, allowed_schema)
-
-    def _fallback_sql_generator(
-        self, question: str, allowed_schema: dict[str, Any]
-    ) -> str:
-        """Heuristic fallback when API key is missing or API call fails."""
-        schemas = allowed_schema.get("schemas", {})
-        if not schemas:
-            return "SELECT 1"
-
-        first_schema_name = list(schemas.keys())[0]
-        tables = schemas[first_schema_name].get("tables", {})
-        if not tables:
-            return "SELECT 1"
-
-        first_table_name = list(tables.keys())[0]
-        tbl_info = tables[first_table_name]
-        columns = tbl_info.get("columns", ["*"]) if isinstance(tbl_info, dict) else tbl_info
-
-        q_lower = question.lower()
-        if any(w in q_lower for w in ["avg", "average"]):
-            num_col = next((c for c in columns if "amount" in c or "val" in c), columns[0] if columns else "*")
-            return f"SELECT AVG({num_col}) AS average_amount FROM {first_table_name}"
-        elif any(w in q_lower for w in ["count", "how many", "number of"]):
-            return f"SELECT COUNT(*) AS total_count FROM {first_table_name}"
-        elif any(w in q_lower for w in ["total", "sum", "revenue"]):
-            num_col = next((c for c in columns if "amount" in c or "total" in c or "val" in c), columns[0] if columns else "*")
-            return f"SELECT SUM({num_col}) AS total_amount FROM {first_table_name}"
-        elif "amount" in q_lower:
-            num_col = next((c for c in columns if "amount" in c or "total" in c or "val" in c), columns[0] if columns else "*")
-            return f"SELECT SUM({num_col}) AS total_amount FROM {first_table_name}"
-
-        cols_str = ", ".join(columns[:5]) if columns else "*"
-        return f"SELECT {cols_str} FROM {first_table_name} LIMIT 10"
+            logger.error(f"LLM generation failed unexpectedly: {e}")
+            raise LLMError(f"Failed to generate SQL due to unexpected LLM error: {str(e)}")
 
 
 llm_client = LLMClient()

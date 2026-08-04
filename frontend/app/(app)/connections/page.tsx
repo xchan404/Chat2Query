@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { connectionsApi, type ConnectionOut } from "@/lib/api/connections";
+import { connectionsApi, type ConnectionOut, type TestResult } from "@/lib/api/connections";
 import { ConnectionForm } from "@/components/connections/ConnectionForm";
 import { SchemaTree } from "@/components/connections/SchemaTree";
 
@@ -24,11 +24,11 @@ export default function ConnectionsPage() {
   });
 
   const testMutation = useMutation({
-    mutationFn: (id: string) => connectionsApi.testConnection(id),
-    onSuccess: (data, id) => {
+    mutationFn: (id: string) => connectionsApi.test(id),
+    onSuccess: (data: TestResult, id: string) => {
       setTestResult({ id, ok: data.success, msg: data.message });
     },
-    onError: (err: Error, id) => {
+    onError: (err: Error, id: string) => {
       setTestResult({ id, ok: false, msg: err.message });
     },
   });
@@ -162,7 +162,7 @@ export default function ConnectionsPage() {
                       <button
                         onClick={() => testMutation.mutate(conn.id)}
                         disabled={testMutation.isPending}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-xs"
+                        className="text-blue-600 hover:text-blue-800 font-medium text-xs cursor-pointer"
                       >
                         {testMutation.isPending && testMutation.variables === conn.id ? "Testing..." : "Test"}
                       </button>
@@ -170,21 +170,21 @@ export default function ConnectionsPage() {
                       <button
                         onClick={() => syncMutation.mutate(conn.id)}
                         disabled={syncMutation.isPending}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-xs"
+                        className="text-blue-600 hover:text-blue-800 font-medium text-xs cursor-pointer"
                       >
                         {syncMutation.isPending && syncMutation.variables === conn.id ? "Syncing..." : "Sync Schema"}
                       </button>
                       <span className="text-gray-300">|</span>
                       <button
                         onClick={() => setSchemaConnectionId(conn.id)}
-                        className="text-blue-600 hover:text-blue-800 font-medium text-xs"
+                        className="text-blue-600 hover:text-blue-800 font-medium text-xs cursor-pointer"
                       >
                         Schema Tree
                       </button>
                       <span className="text-gray-300">|</span>
                       <button
                         onClick={() => openEdit(conn)}
-                        className="text-gray-600 hover:text-gray-900 font-medium text-xs"
+                        className="text-gray-600 hover:text-gray-900 font-medium text-xs cursor-pointer"
                       >
                         Edit
                       </button>
@@ -195,7 +195,7 @@ export default function ConnectionsPage() {
                             deleteMutation.mutate(conn.id);
                           }
                         }}
-                        className="text-red-600 hover:text-red-800 font-medium text-xs"
+                        className="text-red-600 hover:text-red-800 font-medium text-xs cursor-pointer"
                       >
                         Delete
                       </button>

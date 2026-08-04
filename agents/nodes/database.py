@@ -14,7 +14,7 @@ from agents.state import AgentState
 from core.permissions import resolve_allowed_schema
 from services.database.connection_service import ConnectionService
 from services.database.query_executor import QueryExecutor
-from services.llm.client import llm_client
+from services.llm.client import llm_client, LLMError
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +58,43 @@ async def database_node(state: AgentState, session: AsyncSession) -> dict[str, A
     conn_service = ConnectionService(session)
     conn = await conn_service.get_connection(tenant_id, connection_id)
 
-    # Step 2: Generate SQL via LLM
-    generated_sql = await llm_client.generate_sql(
-        question=question,
-        allowed_schema=allowed_schema,
-        database_type=conn.database_type,
-    )
+    # Step 2: Generate SQL via LLM (with error handling)
+    try:
+        generated_sql = await llm_client.generate_sql(
+            question=question,
+            allowed_schema=allowed_schema,
+            database_type=conn.database_type,
+        )
+    except LLMError as e:
+        logger.error(f"Database Node LLM Error: {e}")
+        return {
+            "allowed_schema": allowed_schema,
+            "sql_result": {
+                "success": False,
+                "status": "error",
+                "errors": [str(e)],
+                "generated_sql": None,
+                "normalized_sql": None,
+                "rows": [],
+                "row_count": 0,
+                "execution_time_ms": 0.0,
+            }
+        }
+    except Exception as e:
+        logger.error(f"Database Node Unexpected Error: {e}")
+        return {
+            "allowed_schema": allowed_schema,
+            "sql_result": {
+                "success": False,
+                "status": "error",
+                "errors": [f"An unexpected error occurred during SQL generation: {str(e)}"],
+                "generated_sql": None,
+                "normalized_sql": None,
+                "rows": [],
+                "row_count": 0,
+                "execution_time_ms": 0.0,
+            }
+        }
 
     # Step 3: Validate and execute
     executor = QueryExecutor(session)

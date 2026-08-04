@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.permissions import resolve_allowed_schema
 from services.database.connection_service import ConnectionService
 from services.database.query_executor import QueryExecutor
-from services.llm.client import llm_client
+from services.llm.client import llm_client, LLMError
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,32 @@ class Text2SQLService:
         )
 
         # Step 2: Generate SQL via LLM
-        generated_sql = await llm_client.generate_sql(
-            question=question,
-            allowed_schema=allowed_schema,
-            database_type=connection.database_type,
-        )
+        try:
+            generated_sql = await llm_client.generate_sql(
+                question=question,
+                allowed_schema=allowed_schema,
+                database_type=connection.database_type,
+            )
+        except LLMError as e:
+            logger.error(f"Text2SQLService LLM Error: {e}")
+            return {
+                "question": question,
+                "connection_id": str(connection_id),
+                "generated_sql": "",
+                "result": {
+                    "error": str(e)
+                }
+            }
+        except Exception as e:
+            logger.error(f"Text2SQLService Unexpected Error: {e}")
+            return {
+                "question": question,
+                "connection_id": str(connection_id),
+                "generated_sql": "",
+                "result": {
+                    "error": f"An unexpected error occurred during SQL generation: {str(e)}"
+                }
+            }
 
         # Step 3: Validate and execute
         result = await self.executor.execute_query(
