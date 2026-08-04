@@ -182,7 +182,7 @@ curl -N -X POST "http://localhost:8000/api/chat/stream" \
 2. **`pgvector` vs Dedicated Vector Database**:
    - Integrated `pgvector` within PostgreSQL to maintain single-database transactional consistency, unified backup procedures, and simplified tenant isolation via standard SQL `tenant_id` foreign keys without operating a separate vector cluster (e.g. Qdrant/Milvus).
 3. **Synchronous Document Processing vs Distributed Task Queue**:
-   - Document parsing, chunking, and embedding run inline inside FastAPI request execution for deterministic MVP processing status updates (`pending` → `processing` → `completed`). The processing pipeline is completely encapsulated in `services/documents/document_processor.py` for easy offloading to Celery or Redis Worker tasks.
+   - Document parsing, chunking, and embedding run inline inside FastAPI request execution for deterministic MVP processing status updates. **Trade-off Notice**: `POST /api/files/upload` execution blocks synchronously, causing up to ~14 seconds of HTTP request hanging for large multi-page PDFs while the PyTorch embedding runs. This is a deliberate simplification to remove external worker queue dependencies (Celery/Redis worker processes), representing a legitimate UX limitation rather than a bug. The pipeline is encapsulated in `services/documents/document_processor.py` for easy future offloading.
 4. **Model Selection**:
    - Selected `BAAI/bge-m3` as a thread-safe singleton model (`_get_model()`) loaded once at startup to produce 1024-dimensional dense vectors suitable for multilingual and domain-specific retrieval.
 

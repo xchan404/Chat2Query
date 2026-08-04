@@ -7,7 +7,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { authApi, type UserOut, type LoginRequest } from "@/lib/api/auth";
+import { authApi, type UserOut, type LoginRequest, type TokenPair } from "@/lib/api/auth";
+import { tokenStorage } from "@/lib/auth/tokenStorage";
 
 interface AuthContextType {
   user: UserOut | null;
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const tokens = await authApi.refresh();
+        tokenStorage.setTokens(tokens.access_token, tokens.refresh_token);
         if (tokens.access_token) {
           scheduleSilentRefresh(tokens.access_token);
         }
@@ -73,17 +75,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, refreshDelayMs);
   }, [clearRefreshTimer]);
 
+  // apiClient.ts / files.ts talk to the FastAPI backend directly with a Bearer
+  // token read from tokenStorage (localStorage) — the httpOnly cookies set by
+  // the Next.js proxy routes only authenticate calls to those proxy routes,
+  // not direct backend calls. Persist the access/refresh tokens here whenever
+  // we receive them so the rest of the app's API clients actually work.
+  const persistTokens = (tokens: TokenPair) => {
+    if (tokens.access_token && tokens.refresh_token) {
+      tokenStorage.setTokens(tokens.access_token, tokens.refresh_token);
+    }
+  };
+
   const fetchCurrentUser = useCallback(async () => {
     try {
       const userData = await authApi.me();
       setUser(userData);
       // Automatically refresh token on mount to obtain access_token and schedule silent refresh timer
       const tokens = await authApi.refresh();
+      persistTokens(tokens);
       if (tokens.access_token) {
         scheduleSilentRefresh(tokens.access_token);
       }
     } catch {
       setUser(null);
+      tokenStorage.clearTokens();
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: LoginRequest) => {
     const tokens = await authApi.login(credentials);
+    persistTokens(tokens);
     if (tokens.access_token) {
       scheduleSilentRefresh(tokens.access_token);
     }
@@ -112,11 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
     setUser(null);
+    tokenStorage.clearTokens();
     router.push("/login");
   };
 
   const refresh = async () => {
     const tokens = await authApi.refresh();
+    persistTokens(tokens);
     if (tokens.access_token) {
       scheduleSilentRefresh(tokens.access_token);
     }

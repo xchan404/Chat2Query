@@ -126,4 +126,4 @@ async def process_file(
         file_record.processing_error = str(e)
         session.add(file_record)
         await session.flush()
-        raise
+        return 0

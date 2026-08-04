@@ -30,13 +30,15 @@ async def similarity_search(
     # Embed the query
     query_embedding = embed_single(query_text)
 
+    from sqlalchemy import cast
+
     # Build query with cosine distance operator (<=>)
     # pgvector cosine distance: 1 - cosine_similarity
     # Lower distance = more similar
     stmt = (
         select(
             DocumentChunk,
-            DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"),
+            DocumentChunk.embedding.cosine_distance(cast(query_embedding, Vector(1024))).label("distance"),
         )
         .where(DocumentChunk.tenant_id == tenant_id)
         .where(DocumentChunk.embedding.isnot(None))
