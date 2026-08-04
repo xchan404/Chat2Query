@@ -1,10 +1,9 @@
 import React from "react";
-import { useAuth } from "@/lib/auth/AuthProvider";
 
 interface RoleSelectProps {
   selectedRole: string;
-  onRoleChange: (role: string) => void;
-  availableRoles: string[]; // From DB or context
+  onRoleChange: (roleId: string) => void;
+  availableRoles: { id: string; name: string }[];
 }
 
 export function RoleSelect({ selectedRole, onRoleChange, availableRoles }: RoleSelectProps) {
@@ -21,8 +20,8 @@ export function RoleSelect({ selectedRole, onRoleChange, availableRoles }: RoleS
       >
         <option value="" disabled>Select role...</option>
         {availableRoles.map((role) => (
-          <option key={role} value={role}>
-            {role}
+          <option key={role.id} value={role.id}>
+            {role.name}
           </option>
         ))}
       </select>

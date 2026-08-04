@@ -160,3 +160,15 @@ async def get_me(
         roles=[role.name for role in user.roles],
         created_at=user.created_at,
     )
+
+
+@router.get("/roles")
+async def get_roles(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all roles for the current tenant."""
+    from repositories.role_repo import RoleRepository
+    role_repo = RoleRepository(db)
+    roles = await role_repo.get_all_for_tenant(current_user.tenant_id)
+    return [{"id": str(r.id), "name": r.name} for r in roles]
