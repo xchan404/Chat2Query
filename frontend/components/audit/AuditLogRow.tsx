@@ -13,43 +13,32 @@ export function AuditLogRow({ log }: AuditLogRowProps) {
     ? new Date(log.created_at).toISOString().replace("T", " ").substring(0, 19)
     : "—";
 
-  // Action badge color mapping
-  const actionUpper = log.action.toUpperCase();
-  let actionColorClass = "bg-cobalt-bg text-cobalt-signal";
-  if (actionUpper.includes("CHAT") || actionUpper.includes("EXECUTE")) {
-    actionColorClass = "bg-purple-bg text-purple-signal";
-  } else if (actionUpper.includes("LOGIN") || actionUpper.includes("AUTH")) {
-    actionColorClass = "bg-emerald-bg text-emerald-pass";
-  } else if (actionUpper.includes("PERMISSION") || actionUpper.includes("UPDATE")) {
-    actionColorClass = "bg-yellow-bg text-yellow-signal";
-  }
-
   const resourceStr = log.resource_type
     ? `${log.resource_type}${log.resource_id ? `:${log.resource_id.slice(0, 8)}` : ""}`
     : "system";
 
   return (
-    <tr className="border-b-med border-ink-dark hover:bg-cobalt-bg transition-none">
-      <td className="p-3 font-mono text-xs font-semibold border-r-med border-ink-dark">
+    <tr className="hover:bg-gray-50/80 transition-colors">
+      <td className="p-3 font-mono text-[11px] text-gray-600 border-r border-gray-200">
         {formattedTime}
       </td>
-      <td className="p-3 font-mono text-xs font-semibold border-r-med border-ink-dark">
+      <td className="p-3 font-mono text-[11px] text-gray-700 border-r border-gray-200">
         {log.user_id ? `${log.user_id.slice(0, 8)}...` : "system"}
       </td>
-      <td className="p-3 font-mono text-xs font-semibold border-r-med border-ink-dark">
-        <span className={`${actionColorClass} px-1.5 py-0.5 border border-ink-dark font-extrabold`}>
+      <td className="p-3 border-r border-gray-200">
+        <span className="bg-gray-100 text-gray-800 border border-gray-200 font-mono text-[11px] font-medium px-2 py-0.5 rounded">
           {log.action}
         </span>
       </td>
-      <td className="p-3 font-mono text-xs font-semibold border-r-med border-ink-dark">
+      <td className="p-3 font-mono text-[11px] text-gray-600 border-r border-gray-200">
         {resourceStr}
       </td>
-      <td className="p-3 border-r-med border-ink-dark">
-        <span className="font-mono text-[11px] font-extrabold px-2 py-0.5 border border-ink-dark uppercase bg-emerald-bg text-emerald-pass border-emerald-pass">
-          LOGGED
+      <td className="p-3 border-r border-gray-200">
+        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded uppercase">
+          Recorded
         </span>
       </td>
-      <td className="p-3 font-mono text-xs font-semibold">
+      <td className="p-3 font-normal text-xs text-gray-800">
         {log.description ?? "N/A"}
       </td>
     </tr>

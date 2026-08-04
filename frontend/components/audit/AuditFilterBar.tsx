@@ -9,20 +9,20 @@ interface AuditFilterBarProps {
 
 export function AuditFilterBar({ onExport, count }: AuditFilterBarProps) {
   return (
-    <div className="border-b-thick border-ink-dark pb-3 flex items-center justify-between">
+    <div className="flex items-center justify-between p-3.5 px-5 bg-white border-b border-gray-300">
       <div>
-        <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+        <h1 className="font-semibold text-sm text-gray-900">
           Audit Trail &amp; Verification Logs
         </h1>
-        <div className="font-mono text-xs text-ink-muted mt-1">
-          TOTAL RECORDED EVENTS: <span className="font-bold text-ink-dark">{count}</span>
-        </div>
+        <p className="text-xs text-gray-500 mt-0.5 font-normal">
+          Immutable event log stream • Total recorded events: <span className="font-semibold text-gray-800">{count}</span>
+        </p>
       </div>
       <button
         onClick={onExport}
-        className="bg-ink-dark text-white border-med border-ink-dark px-4 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer transition-none"
+        className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-medium text-xs px-3 py-1.5 rounded-md transition-colors cursor-pointer"
       >
-        EXPORT LOGS (CSV)
+        Export Logs (CSV)
       </button>
     </div>
   );

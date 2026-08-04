@@ -1,5 +1,5 @@
 import React from "react";
-import { SchemaOut, TableOut, ColumnOut } from "@/lib/api/connections";
+import { SchemaOut, TableOut } from "@/lib/api/connections";
 import { TablePermissionOut, TablePermissionCreate, ColumnPermissionCreate } from "@/lib/api/permissions";
 import { PermissionToggle } from "./PermissionToggle";
 
@@ -38,7 +38,6 @@ export function PermissionMatrix({
       return;
     }
     
-    // Create or update
     onUpdatePermission({
       role_id: roleId,
       connection_id: connectionId,
@@ -85,7 +84,6 @@ export function PermissionMatrix({
     const existing = getTablePerm(schema.schema_name, table.table_name);
     const existingCols = existing?.column_permissions || [];
     
-    // Find if col already has an override
     const colIdx = existingCols.findIndex(c => c.column_name === columnName);
     
     const newCols: ColumnPermissionCreate[] = existingCols.map(c => ({
@@ -116,60 +114,60 @@ export function PermissionMatrix({
   };
 
   return (
-    <div className="bg-white border-thick border-ink-dark shadow-hard overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead>
-          <tr className="bg-surface font-display font-extrabold text-xs uppercase border-b-thick border-ink-dark">
-            <th className="p-3 border-r-med border-ink-dark w-1/4">TABLE</th>
-            <th className="p-3 border-r-med border-ink-dark w-1/6">ACCESS</th>
-            <th className="p-3 border-r-med border-ink-dark w-1/4">ROW FILTER (WHERE)</th>
-            <th className="p-3 w-1/3">COLUMNS (ALLOWED / MASKED)</th>
+    <div className="bg-white border border-gray-300 rounded-md overflow-hidden shadow-sm">
+      <table className="w-full text-left text-xs border-collapse">
+        <thead className="bg-gray-50 border-b border-gray-300 font-semibold text-[11px] uppercase tracking-wider text-gray-600">
+          <tr>
+            <th className="p-3 border-r border-gray-200 w-1/4">SCHEMA &amp; TABLE</th>
+            <th className="p-3 border-r border-gray-200 w-1/6">ACCESS TYPE</th>
+            <th className="p-3 border-r border-gray-200 w-1/4">ROW FILTER (WHERE)</th>
+            <th className="p-3 w-1/3">COLUMN CONTROLS (ALLOW / MASK)</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-200 text-gray-900">
           {schemas.flatMap((schema) =>
             schema.tables.map((table) => {
               const perm = getTablePerm(schema.schema_name, table.table_name);
-              const isAllowed = perm ? perm.access_type !== "none" : true; // Default is read for simplicity or none? Assuming read if no explicit block for MVP
+              const isAllowed = perm ? perm.access_type !== "none" : true;
 
               return (
-                <tr key={`${schema.id}-${table.id}`} className="border-b-med border-ink-dark hover:bg-cobalt-bg/5">
-                  <td className="p-3 font-mono text-xs font-semibold border-r-med border-ink-dark align-top">
+                <tr key={`${schema.id}-${table.id}`} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="p-3 font-mono text-xs font-semibold border-r border-gray-200 align-top text-gray-900">
                     {schema.schema_name}.{table.table_name}
                   </td>
-                  <td className="p-3 border-r-med border-ink-dark align-top">
+                  <td className="p-3 border-r border-gray-200 align-top">
                     <select
-                      value={perm?.access_type || "read"} // UI default
+                      value={perm?.access_type || "read"}
                       onChange={(e) => handleTableAccessChange(schema, table, e.target.value as any)}
-                      className="border-med border-ink-dark px-2 py-1 font-mono text-xs bg-white w-full"
+                      className="border border-gray-300 rounded px-2 py-1 font-mono text-xs bg-white text-gray-800 w-full focus:outline-none focus:border-blue-500"
                     >
                       <option value="read">READ</option>
                       <option value="write">WRITE</option>
                       <option value="none">NONE (BLOCKED)</option>
                     </select>
                   </td>
-                  <td className="p-3 border-r-med border-ink-dark align-top">
+                  <td className="p-3 border-r border-gray-200 align-top">
                     <input
                       type="text"
                       placeholder="e.g. tenant_id = 'xxx'"
                       value={perm?.row_filter || ""}
                       onChange={(e) => handleRowFilterChange(schema, table, e.target.value)}
-                      onBlur={(e) => handleRowFilterChange(schema, table, e.target.value)} // ensure save
+                      onBlur={(e) => handleRowFilterChange(schema, table, e.target.value)}
                       disabled={!isAllowed}
-                      className="border-med border-ink-dark px-2 py-1 font-mono text-xs bg-white w-full disabled:bg-surface disabled:opacity-50"
+                      className="border border-gray-300 rounded px-2 py-1 font-mono text-xs bg-white text-gray-800 w-full disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-blue-500"
                     />
                   </td>
                   <td className="p-3 align-top">
-                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2">
+                    <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
                       {table.columns?.map((col) => {
                         const colPerm = perm?.column_permissions?.find((c) => c.column_name === col.column_name);
                         const colAllowed = colPerm ? colPerm.is_allowed : true;
                         const colMasked = colPerm ? colPerm.is_masked : false;
 
                         return (
-                          <div key={col.id} className="flex items-center justify-between bg-surface p-2 border-med border-ink-dark">
-                            <span className="font-mono text-xs">{col.column_name}</span>
-                            <div className="flex items-center gap-4">
+                          <div key={col.id} className="flex items-center justify-between bg-gray-50 px-2.5 py-1.5 border border-gray-200 rounded text-xs">
+                            <span className="font-mono text-xs text-gray-800 font-medium">{col.column_name}</span>
+                            <div className="flex items-center gap-3">
                               <PermissionToggle
                                 label="Allow"
                                 checked={colAllowed}

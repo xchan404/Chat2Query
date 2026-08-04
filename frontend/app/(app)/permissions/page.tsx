@@ -14,13 +14,13 @@ export default function PermissionsPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
   // Fetch connections
-  const { data: connections = [], isLoading: isLoadingConnections } = useQuery({
+  const { data: connections = [] } = useQuery({
     queryKey: ["connections"],
     queryFn: connectionsApi.list,
   });
 
   // Fetch roles
-  const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
+  const { data: roles = [] } = useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
       return await apiFetch<{ id: string; name: string }[]>("/api/auth/roles");
@@ -69,31 +69,36 @@ export default function PermissionsPage() {
     },
   });
 
-  const isLoading = isLoadingConnections || isLoadingRoles || isLoadingSchemas || isLoadingPermissions;
+  const isLoading = isLoadingSchemas || isLoadingPermissions;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-      <div className="border-b-thick border-ink-dark pb-3 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-          Effective Schema &amp; Security Pipeline Rules
-        </h1>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50">
+      {/* Page Header */}
+      <div className="flex items-center justify-between p-3.5 px-5 bg-white border-b border-gray-300">
+        <div>
+          <h1 className="font-semibold text-sm text-gray-900">
+            Role Access &amp; Security Pipeline Matrix
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5 font-normal">
+            Configure table read/write rules, row-level WHERE filters, and column masking policies
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-6 p-4 bg-surface border-thick border-ink-dark shadow-hard">
+      {/* Selectors Bar */}
+      <div className="p-4 px-5 bg-white border-b border-gray-300 flex flex-wrap gap-4 items-center">
         {/* Connection Selector */}
         <div className="flex items-center gap-2">
-          <label className="font-display text-xs font-extrabold uppercase tracking-tight text-ink">
-            DATABASE:
-          </label>
+          <label className="text-xs font-medium text-gray-600">Database Connection:</label>
           <select
             value={selectedConnectionId}
             onChange={(e) => setSelectedConnectionId(e.target.value)}
-            className="border-thick border-ink-dark bg-white px-3 py-1 font-mono text-sm font-semibold shadow-sm focus:outline-none focus:ring-0"
+            className="border border-gray-300 rounded px-2.5 py-1 text-xs font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-500"
           >
-            <option value="" disabled>Select database...</option>
+            <option value="" disabled>Select connection...</option>
             {connections.map((conn) => (
               <option key={conn.id} value={conn.id}>
-                {conn.name}
+                {conn.name} ({conn.database_type})
               </option>
             ))}
           </select>
@@ -105,25 +110,29 @@ export default function PermissionsPage() {
           onRoleChange={setSelectedRoleId} 
           availableRoles={roles} 
         />
-        {/* Since RoleSelect was built to show string names but takes id, let's just render standard select to show real names if needed, but RoleSelect is fine if we adapt it or just map it here. Wait, I should make sure it shows the name instead of the ID! */}
       </div>
 
-      {isLoading ? (
-        <div className="font-mono text-sm font-semibold p-4">Loading matrix...</div>
-      ) : selectedConnectionId && selectedRoleId ? (
-        <PermissionMatrix
-          connectionId={selectedConnectionId}
-          roleId={selectedRoleId}
-          schemas={schemas}
-          permissions={permissions}
-          onUpdatePermission={(data) => updatePermMutation.mutate(data)}
-          onDeletePermission={(id) => deletePermMutation.mutate(id)}
-        />
-      ) : (
-        <div className="font-mono text-sm p-4 bg-surface border-thick border-ink-dark shadow-hard">
-          Please select a database connection and a target role.
-        </div>
-      )}
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {isLoading ? (
+          <div className="bg-white border border-gray-300 rounded-md p-6 text-xs text-gray-500 text-center">
+            Loading security matrix...
+          </div>
+        ) : selectedConnectionId && selectedRoleId ? (
+          <PermissionMatrix
+            connectionId={selectedConnectionId}
+            roleId={selectedRoleId}
+            schemas={schemas}
+            permissions={permissions}
+            onUpdatePermission={(data) => updatePermMutation.mutate(data)}
+            onDeletePermission={(id) => deletePermMutation.mutate(id)}
+          />
+        ) : (
+          <div className="bg-white border border-gray-300 rounded-md p-6 text-xs text-gray-500 text-center">
+            Please select a database connection and a target role.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

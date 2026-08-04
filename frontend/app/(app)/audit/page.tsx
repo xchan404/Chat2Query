@@ -14,8 +14,8 @@ export default function AuditPage() {
   const { data: logs, isLoading: logsLoading, isError, error } = useQuery<AuditLogOut[]>({
     queryKey: ["audit-logs"],
     queryFn: () => auditApi.getAuditLogs(),
-    enabled: !!isAdmin, // Only fetch if user is admin
-    staleTime: 0, // Always fresh when visiting page
+    enabled: !!isAdmin,
+    staleTime: 0,
   });
 
   const handleExportCSV = () => {
@@ -41,7 +41,7 @@ export default function AuditPage() {
 
   if (authLoading) {
     return (
-      <div className="flex-1 p-6 font-mono text-xs uppercase text-ink-muted">
+      <div className="flex-1 p-6 text-xs text-gray-500 font-mono">
         Loading Session Authentication...
       </div>
     );
@@ -50,15 +50,15 @@ export default function AuditPage() {
   // Admin authorization gate check
   if (!user || !isAdmin) {
     return (
-      <div className="flex-1 p-6 flex flex-col items-center justify-center gap-4">
-        <div className="bg-red-50 border-thick border-ink-dark p-6 shadow-hard text-center max-w-md">
-          <div className="font-display text-xl font-extrabold text-red-600 uppercase mb-2">
-            403 — Access Denied
+      <div className="flex-1 p-6 flex flex-col items-center justify-center gap-4 bg-gray-50">
+        <div className="bg-white border border-gray-300 rounded-md p-6 text-center max-w-md shadow-sm">
+          <div className="text-sm font-semibold text-red-600 mb-2">
+            403 — Access Restricted
           </div>
-          <p className="font-mono text-xs text-ink-dark mb-4">
-            Audit logs contain sensitive security metrics and are strictly gated to users with the <span className="font-bold">admin</span> role.
+          <p className="text-xs text-gray-600 mb-4">
+            Audit logs contain sensitive security metrics and are strictly gated to users with the <span className="font-semibold text-gray-800">admin</span> role.
           </p>
-          <div className="font-mono text-[11px] bg-paper p-2 border border-ink-dark text-ink-muted">
+          <div className="text-[11px] font-mono bg-gray-50 p-2 rounded border border-gray-200 text-gray-600">
             CURRENT USER: {user?.username ?? "Anonymous"} ({user?.roles?.join(", ") || "no roles"})
           </div>
         </div>
@@ -67,41 +67,43 @@ export default function AuditPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50">
       <AuditFilterBar onExport={handleExportCSV} count={logs?.length ?? 0} />
 
-      <div className="bg-white border-thick border-ink-dark shadow-hard overflow-x-auto">
-        {logsLoading ? (
-          <div className="p-8 text-center font-mono text-xs text-ink-muted uppercase">
-            Loading Audit Records...
-          </div>
-        ) : isError ? (
-          <div className="p-8 text-center font-mono text-xs text-red-600 uppercase">
-            Failed to load audit logs: {(error as Error)?.message ?? "Unknown Error"}
-          </div>
-        ) : !logs || logs.length === 0 ? (
-          <div className="p-8 text-center font-mono text-xs text-ink-muted uppercase">
-            No audit records found.
-          </div>
-        ) : (
-          <table className="w-full border-collapse text-left text-sm">
-            <thead>
-              <tr className="bg-surface font-display font-extrabold text-xs uppercase border-b-thick border-ink-dark">
-                <th className="p-3 border-r-med border-ink-dark">TIMESTAMP (UTC)</th>
-                <th className="p-3 border-r-med border-ink-dark">USER ID</th>
-                <th className="p-3 border-r-med border-ink-dark">ACTION</th>
-                <th className="p-3 border-r-med border-ink-dark">RESOURCE</th>
-                <th className="p-3 border-r-med border-ink-dark">STATUS</th>
-                <th className="p-3">DESCRIPTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <AuditLogRow key={log.id} log={log} />
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div className="flex-1 overflow-y-auto p-5">
+        <div className="bg-white border border-gray-300 rounded-md overflow-hidden shadow-sm">
+          {logsLoading ? (
+            <div className="p-8 text-center text-xs text-gray-500 font-mono">
+              Loading audit logs...
+            </div>
+          ) : isError ? (
+            <div className="p-8 text-center text-xs text-red-600 font-mono">
+              Failed to load audit logs: {(error as Error)?.message ?? "Unknown Error"}
+            </div>
+          ) : !logs || logs.length === 0 ? (
+            <div className="p-8 text-center text-xs text-gray-500 font-mono">
+              No audit records found.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-gray-50 border-b border-gray-300 font-semibold text-[11px] uppercase tracking-wider text-gray-600">
+                <tr>
+                  <th className="p-3 border-r border-gray-200">TIMESTAMP (UTC)</th>
+                  <th className="p-3 border-r border-gray-200">USER ID</th>
+                  <th className="p-3 border-r border-gray-200">ACTION</th>
+                  <th className="p-3 border-r border-gray-200">RESOURCE</th>
+                  <th className="p-3 border-r border-gray-200">STATUS</th>
+                  <th className="p-3">DESCRIPTION</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 text-gray-900">
+                {logs.map((log) => (
+                  <AuditLogRow key={log.id} log={log} />
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

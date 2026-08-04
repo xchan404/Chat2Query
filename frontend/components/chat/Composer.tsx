@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * Composer — query input bar with DB connection selector and KB scope selector.
- * Fetches real database connections and knowledge bases via TanStack Query.
- */
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { connectionsApi } from "@/lib/api/connections";
@@ -51,44 +46,40 @@ export function Composer({
   };
 
   return (
-    <div className="flex flex-col border-t-thick border-ink-dark bg-surface">
-      {/* Scope Selectors Top Bar */}
-      <div className="flex items-center justify-between p-2 px-4 bg-surface border-b-med border-ink-dark gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* DB Connection Selector */}
-          <div className="flex items-center gap-1.5 bg-cobalt-bg border-med border-cobalt-signal px-2.5 py-1 font-mono text-xs font-bold text-cobalt-signal shadow-sm">
-            <span>DB:</span>
+    <div className="flex flex-col border-t border-gray-300 bg-white">
+      {/* Inline Scope Selector Bar */}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-50 border-b border-gray-200 text-xs">
+        <div className="flex items-center gap-4">
+          {/* DB Scope */}
+          <div className="flex items-center gap-1.5 font-medium text-gray-700">
+            <span className="text-gray-500 font-normal">Database:</span>
             <select
               id="select-db-connection"
               value={selectedConnectionId ?? ""}
               onChange={(e) => setSelectedConnectionId(e.target.value || null)}
-              className="bg-transparent border-none font-bold outline-none cursor-pointer text-cobalt-signal max-w-[200px]"
+              className="bg-white border border-gray-300 rounded px-2 py-0.5 text-xs text-gray-800 font-medium focus:outline-none focus:border-blue-500"
             >
-              <option value="" className="bg-white text-ink-dark">
-                All / Auto (Default)
-              </option>
+              <option value="">All Databases (Default)</option>
               {connections?.map((conn) => (
-                <option key={conn.id} value={conn.id} className="bg-white text-ink-dark">
+                <option key={conn.id} value={conn.id}>
                   {conn.name} ({conn.database_type})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Knowledge Base Selector */}
-          <div className="flex items-center gap-1.5 bg-cyan-bg border-med border-cyan-signal px-2.5 py-1 font-mono text-xs font-bold text-cyan-signal shadow-sm">
-            <span>KB:</span>
+          {/* KB Scope */}
+          <div className="flex items-center gap-1.5 font-medium text-gray-700">
+            <span className="text-gray-500 font-normal">Knowledge Base:</span>
             <select
               id="select-knowledge-base"
               value={selectedKbId ?? ""}
               onChange={(e) => setSelectedKbId(e.target.value || null)}
-              className="bg-transparent border-none font-bold outline-none cursor-pointer text-cyan-signal max-w-[200px]"
+              className="bg-white border border-gray-300 rounded px-2 py-0.5 text-xs text-gray-800 font-medium focus:outline-none focus:border-blue-500"
             >
-              <option value="" className="bg-white text-ink-dark">
-                All / Auto (Default)
-              </option>
+              <option value="">All Knowledge Bases (Default)</option>
               {knowledgeBases?.map((kb) => (
-                <option key={kb.id} value={kb.id} className="bg-white text-ink-dark">
+                <option key={kb.id} value={kb.id}>
                   {kb.name}
                 </option>
               ))}
@@ -96,13 +87,13 @@ export function Composer({
           </div>
         </div>
 
-        <div className="font-mono text-[10px] text-ink-muted uppercase">
-          MODE: SSE REALTIME
+        <div className="text-[11px] font-mono text-gray-400">
+          SSE REALTIME
         </div>
       </div>
 
-      {/* Input Bar */}
-      <div className="p-3.5 px-5 flex gap-3">
+      {/* Input Field & Action Button */}
+      <div className="p-3 px-4 flex gap-3">
         <input
           id="chat-input"
           type="text"
@@ -110,16 +101,16 @@ export function Composer({
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className="flex-1 bg-white border-thick border-ink-dark p-3 font-body text-sm font-semibold shadow-sm outline-none focus:border-cobalt-signal disabled:opacity-50"
-          placeholder="Ask database query or search document knowledge base..."
+          className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-xs font-normal text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 disabled:bg-gray-50"
+          placeholder="Enter natural language query or analysis request..."
         />
         <button
           id="chat-send-btn"
           onClick={onSend}
           disabled={disabled || !question.trim()}
-          className="bg-yellow-signal text-ink-dark border-thick border-ink-dark px-6 font-display font-extrabold text-sm uppercase shadow-hard hover:bg-ink-dark hover:text-yellow-signal disabled:opacity-50 transition-none cursor-pointer shrink-0"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-4 py-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer shrink-0"
         >
-          {disabled ? "// SENDING..." : "SEND [ENTER]"}
+          {disabled ? "Processing..." : "Submit Query"}
         </button>
       </div>
     </div>

@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * MessageRow — renders user query or assistant answer cards.
- * Badges: USER / ASSISTANT // INTENT (CONFIDENCE / INTENT TYPE)
- */
-
 import React from "react";
 import { type CitationOut, type SQLResultOut } from "@/lib/api/chat";
 
@@ -27,70 +22,52 @@ interface MessageRowProps {
 export function MessageRow({ message }: MessageRowProps) {
   const isUser = message.role === "user";
 
-  const getIntentBadgeColor = (intent?: string | null) => {
-    switch (intent) {
-      case "database":
-        return "bg-cobalt-signal text-white";
-      case "document":
-        return "bg-cyan-signal text-white";
-      case "hybrid":
-        return "bg-purple-signal text-white";
-      default:
-        return "bg-purple-signal text-white";
-    }
-  };
-
   return (
-    <div className="flex flex-col gap-1.5 max-w-[880px] w-full">
-      {/* Header Badge */}
-      <div className="flex items-center gap-2.5 font-mono text-xs font-bold">
+    <div className="flex flex-col gap-1.5 w-full">
+      {/* Header Info */}
+      <div className="flex items-center gap-2 text-xs">
         {isUser ? (
-          <span className="bg-yellow-signal text-ink-dark px-2 py-0.5 border-med border-ink-dark uppercase font-extrabold">
-            USER
+          <span className="font-semibold text-gray-900 bg-gray-200 px-2 py-0.5 rounded text-[11px]">
+            User Query
           </span>
         ) : (
-          <span
-            className={`px-2 py-0.5 border-med border-ink-dark uppercase font-extrabold ${getIntentBadgeColor(
-              message.intent
-            )}`}
-          >
-            ASSISTANT // {(message.intent ?? "HYBRID INTENT").toUpperCase()}
+          <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-[11px]">
+            Assistant Output • INTENT: {(message.intent ?? "HYBRID").toUpperCase()}
           </span>
         )}
-        <span className="text-ink-muted text-[11px]">{message.timestamp}</span>
+        <span className="text-gray-400 text-[11px] font-mono">{message.timestamp}</span>
         {message.isStreaming && (
-          <span className="bg-yellow-signal text-ink-dark px-1.5 py-0.2 font-mono text-[10px] font-extrabold animate-pulse border border-ink-dark">
-            STREAMING...
+          <span className="text-blue-600 font-mono text-[10px] font-semibold">
+            [Processing...]
           </span>
         )}
       </div>
 
-      {/* Message Card Body */}
+      {/* Structured Card Content */}
       <div
-        className={`bg-white border-thick border-ink-dark p-4 shadow-sm font-body text-sm leading-relaxed whitespace-pre-wrap ${
-          isUser ? "border-l-8 border-l-yellow-signal" : "border-l-8 border-l-purple-signal"
+        className={`border rounded-md p-4 text-xs font-normal leading-relaxed text-gray-900 ${
+          isUser
+            ? "bg-gray-100/80 border-gray-300"
+            : "bg-white border-gray-300 shadow-sm"
         }`}
       >
-        {message.content}
-        {message.isStreaming && (
-          <span className="inline-block w-2 h-4 bg-purple-signal ml-1 animate-pulse align-middle" />
+        <div className="whitespace-pre-wrap">{message.content}</div>
+
+        {/* Sources Footer */}
+        {!isUser && message.sources_used && message.sources_used.length > 0 && (
+          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-200 font-mono text-[10px] text-gray-500">
+            <span className="font-semibold uppercase text-gray-600">SOURCES:</span>
+            {message.sources_used.map((src, idx) => (
+              <span
+                key={idx}
+                className="bg-gray-100 border border-gray-300 px-1.5 py-0.5 rounded text-gray-700 font-medium"
+              >
+                {src}
+              </span>
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Sources badge footer if assistant message */}
-      {!isUser && message.sources_used && message.sources_used.length > 0 && (
-        <div className="flex items-center gap-2 font-mono text-[10px] text-ink-muted mt-0.5">
-          <span className="font-extrabold uppercase">SOURCES:</span>
-          {message.sources_used.map((src, idx) => (
-            <span
-              key={idx}
-              className="bg-surface border border-ink-dark px-1.5 py-0.5 font-bold uppercase text-ink-dark"
-            >
-              {src}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

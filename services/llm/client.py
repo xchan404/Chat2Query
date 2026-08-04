@@ -21,7 +21,7 @@ class LLMClient:
     def __init__(self, api_key: str | None = None):
         settings = get_settings()
         self.api_key = api_key or settings.ANTHROPIC_API_KEY
-        self.model = "claude-haiku-4-5"
+        self.model = getattr(settings, "ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
 
     async def generate_sql(
         self,
