@@ -58,72 +58,79 @@ Here is **Chat2Query** operating cleanly in real time, featuring a high-contrast
 
 ## 🏗️ System Architecture
 
-```mermaid
-flowchart TD
-    %% Define styles for distinct layers
-    classDef client fill:none,stroke:#0ea5e9,stroke-width:2px,stroke-dasharray: 5 5
-    classDef api fill:none,stroke:#10b981,stroke-width:2px
-    classDef engine fill:none,stroke:#f59e0b,stroke-width:2px
-    classDef security fill:none,stroke:#ef4444,stroke-width:2px
-    classDef data fill:none,stroke:#6366f1,stroke-width:2px
-    
-    subgraph Client ["🖥️ Client (Next.js 16)"]
-        UI["Serious Enterprise UI"]
-        CmdK["Command Palette"]
-        Rail["Exposed Evidence Ledger"]
-    end
-    class Client client
+<div align="center">
+  <img src="http://www.plantuml.com/plantuml/svg/PLN1RXit4BtlLmnSe50Ebf76JOl04QB8Qq6jR2jPEJqKHJ1QZbQikUI6f6ohHR-XG0yzD8SaXwA_q5C_fZ_GV4A7fBLUnHU9d7apV8_pH3rp7grVrofpbr8tQB66qjIDqQHzuJUAm5BfKLUAEf05bfULDMijHaOP2zwYTfpYeWxAhL2OQwahMA9otNf1IrmhVsAqFyEQOA8zsKv-QAsvJgq_UtpurU7NYonh-4oi2FO-lllzp__-_XL6Il9vq3kZ6z__qS73nm_s0DqsVdHqPWGD1l1p1l1zGLQQjOCydDHOwGWk9Zy4-CKav4Uchb4BcA4YxobcHhNuDkJocyOu4f1VIK6w99YIgCX6p4kKAlkbm-xVFpx063rTumPw9-ZyS3P9l7Zn2Qbllfl3vp0dZSptL0gXkCocmuThlmgObtaHG4MHCtVH6AczIoURTRWqXWpNGdgOcgeATyrAhsIvRSAP7NeVt_tr7gOypx75PWNdjboHu_5vOoF9N7CJ-eHd60yp327ebGgTaqj9zhNcm8DqLMqmNlQBAOn94xULHaFFlL4TxF7pq2Xg6uxX5TkBnzopM7Knfcn1vDYEFAzYepsJbKd-TlSJ7xahyEs7u8x0eS0b-GtCP4EALKM11PLhApcwA_5X7mePN0w5v-dLh3VTO34VhQYy39Wl69DFyz5ytsYr2Qa8cMyQQZ6F6CDNMYFCoDQIhIGItHXiOOTzdjyrd4Z5CuIUZnPuBKLIdnpHWh_imtHoEfc7MwuRPXb1Kydj4sPN_s__m35wP276aekYu_xeA7mjq6r5YzijxCqK-gMnDSy6Uarr5MUIN3iRxo2dyefWAB1Xtgdt76r5_lZv3knKwibva4UH1ZEBs1WET2yciBy_kFKmF87PERly01jvKAxG7x0Z2UliDjtl3zBF8Np4NSTksTqwjapkufQns84tmGhtKCbVEx3an2oxxH1Ws-apxXKgoVeeMY9h4m5rPu1s5UFTcNVMgQOpuiuwvZgJpUxMyFJfeBri9fJVi9C3d-3ogB5DXYlg_ZwohTpGOZRcuaL5-_KZoEi52S6ESXc7xvLrDh4qF7PS7DwYkRaapREzFwVmugGNAUpPFiz82_w7-Hy=" alt="System Architecture Diagram" />
+</div>
 
-    subgraph API ["⚡ Gateway (FastAPI)"]
-        Auth["JWT & Tenant Middleware"]
-        Router["REST & SSE Endpoints"]
-        Audit["Audit Logging Service"]
-    end
-    class API api
+<details>
+<summary><b>View PlantUML Source Code</b></summary>
 
-    subgraph Engine ["🧠 LangGraph Orchestrator"]
-        Classifier["Intent Node (classifier_node)"]
-        DBNode["SQL Generation (sql_node)"]
-        DocNode["RAG Vector (rag_node)"]
-        Synthesizer["Response Synthesis"]
-    end
-    class Engine engine
+```plantuml
+@startuml
+skinparam componentStyle rectangle
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName Inter
+skinparam ArrowColor #64748b
 
-    subgraph Security ["🛡️ SQL Safety Pipeline (sqlglot)"]
-        ASTCheck["1. Single Statement"]
-        TypeCheck["2. SELECT-only AST"]
-        SchemaCheck["3. Schema Permitted"]
-        TenantCheck["4. Row Filter (tenant_id)"]
-        LimitCheck["5. LIMIT Clamping"]
-    end
-    class Security security
+package "🖥️ Client (Next.js 16)" as Client <<Node>> {
+  [Serious Enterprise UI] as UI
+  [Command Palette] as CmdK
+  [Exposed Evidence Ledger] as Rail
+}
 
-    subgraph Data ["💾 Data Stores"]
-        PG[("Platform DB (pgvector)")]
-        TargetDB[("Live Adapters")]
-        MinIO[("MinIO File Storage")]
-    end
-    class Data data
+package "⚡ Gateway (FastAPI)" as API <<Node>> {
+  [JWT & Tenant Middleware] as Auth
+  [REST & SSE Endpoints] as Router
+  [Audit Logging Service] as Audit
+}
 
-    %% Connections
-    UI == "POST /api/chat/stream" ==> Router
-    Router -.-> Auth
-    Auth -.-> Classifier
-    
-    Classifier -->|"Routes to SQL"| DBNode
-    Classifier -->|"Routes to Vector"| DocNode
-    
-    DBNode -->|"Validates AST"| Security
-    Security == "Executes Safe SQL" ==> TargetDB
-    TargetDB -.-> Synthesizer
-    
-    DocNode == "bge-m3 Embeddings" ==> PG
-    PG -.-> Synthesizer
-    
-    Synthesizer == "SSE Token Stream" ==> Rail
-    Router -.-> Audit
-    Audit -.-> PG
+package "🧠 LangGraph Orchestrator" as Engine <<Node>> {
+  [Intent Node (classifier_node)] as Classifier
+  [SQL Generation (sql_node)] as DBNode
+  [RAG Vector (rag_node)] as DocNode
+  [Response Synthesis] as Synthesizer
+}
+
+package "🛡️ SQL Safety Pipeline" as Security <<Node>> {
+  [1. Single Statement] as ASTCheck
+  [2. SELECT-only AST] as TypeCheck
+  [3. Schema Permitted] as SchemaCheck
+  [4. Row Filter (tenant_id)] as TenantCheck
+  [5. LIMIT Clamping] as LimitCheck
+}
+
+package "💾 Data Stores" as Data <<Database>> {
+  database "Platform DB (pgvector)" as PG
+  database "Live Adapters" as TargetDB
+  database "MinIO File Storage" as MinIO
+}
+
+UI --> Router : POST /api/chat/stream
+Router ..> Auth
+Auth ..> Classifier
+
+Classifier --> DBNode : Routes to SQL
+Classifier --> DocNode : Routes to Vector
+
+DBNode --> ASTCheck : Validates AST
+ASTCheck --> TypeCheck
+TypeCheck --> SchemaCheck
+SchemaCheck --> TenantCheck
+TenantCheck --> LimitCheck
+
+LimitCheck ==> TargetDB : Executes Safe SQL
+TargetDB ..> Synthesizer
+
+DocNode ==> PG : bge-m3 Embeddings
+PG ..> Synthesizer
+
+Synthesizer ==> Rail : SSE Token Stream
+Router ..> Audit
+Audit ..> PG
+@enduml
 ```
+</details>
 
 ---
 
