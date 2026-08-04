@@ -3,13 +3,13 @@ import uuid
 import httpx
 from pydantic import BaseModel
 
-API_BASE = "http://localhost:8000"
+API_BASE = "http://localhost:8081"
 
 async def main():
     print("--- Verifying F6 (Permissions) Cross-Phase DoD ---")
     async with httpx.AsyncClient() as client:
         # 1. Login
-        login_resp = await client.post(f"{API_BASE}/api/auth/login", json={"username": "owner@acme.com", "password": "password123"})
+        login_resp = await client.post(f"{API_BASE}/api/auth/login", json={"username": "acme_admin", "password": "admin123"})
         if login_resp.status_code != 200:
             print(f"Login failed: {login_resp.text}")
             return
@@ -49,24 +49,24 @@ async def main():
 
         print(f"Using Connection: {conn_id} and Role: {role_id} (admin)")
 
-        # 3. Baseline query (should succeed if invoices exists and no block)
+        # 3. Baseline query (should succeed if users exists and no block)
         baseline_payload = {
-            "question": "What is the total amount in invoices?",
+            "question": "How many users are there?",
             "connection_id": conn_id
         }
         
-        # We can't guarantee invoices exist, but if we assume the standard seeded schema from progress:
+        # We can't guarantee users exist, but if we assume the standard seeded schema from progress:
         baseline_resp = await client.post(f"{API_BASE}/api/chat", json=baseline_payload, headers=headers)
         print("Baseline query status:", baseline_resp.status_code)
         # It could be 400 if the connection is not synced or whatever, let's just make sure we apply a block.
         
         # 4. Create Block Permission
-        print("Creating block permission on public.invoices...")
+        print("Creating block permission on public.users...")
         perm_payload = {
             "role_id": role_id,
             "connection_id": conn_id,
             "schema_name": "public",
-            "table_name": "invoices",
+            "table_name": "users",
             "access_type": "none",
             "row_filter": None,
             "column_permissions": []

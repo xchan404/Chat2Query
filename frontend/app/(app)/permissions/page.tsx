@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { connectionsApi } from "@/lib/api/connections";
 import { permissionsApi, TablePermissionCreate } from "@/lib/api/permissions";
-import { apiClient } from "@/lib/api/apiClient";
+import { apiFetch } from "@/lib/api/apiClient";
 import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 import { RoleSelect } from "@/components/permissions/RoleSelect";
 
@@ -23,8 +23,7 @@ export default function PermissionsPage() {
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/auth/roles");
-      return res.data as { id: string; name: string }[];
+      return await apiFetch<{ id: string; name: string }[]>("/api/auth/roles");
     },
   });
 

@@ -170,5 +170,5 @@ async def get_roles(
     """Return all roles for the current tenant."""
     from repositories.role_repo import RoleRepository
     role_repo = RoleRepository(db)
-    roles = await role_repo.get_all_for_tenant(current_user.tenant_id)
+    roles = await role_repo.list_all(current_user.tenant_id)
     return [{"id": str(r.id), "name": r.name} for r in roles]

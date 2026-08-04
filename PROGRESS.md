@@ -304,10 +304,14 @@ tests/integration/test_end_to_end_flow.py::test_integration_hybrid_chat PASSED
 - **Open Item A Resolution (Sync vs Async Uploads)**: Re-verified F5's upload state machine. The `POST /api/files/upload` endpoint executes the entire document processing pipeline (parsing, chunking, and PyTorch embedding generation) **synchronously** within the HTTP request handler before returning a response. For large multi-page PDFs, this causes the HTTP request to block (hang) for up to ~14 seconds, and it returns with `status=completed` rather than returning quickly with `status=pending`. This is a deliberate architectural simplification to avoid external Celery/Redis worker dependencies for the MVP, representing a legitimate UX limitation rather than a bug. This trade-off has been explicitly documented in `README.md` (Section 6, MVP Scope & Architectural Trade-offs).
 ---
 
-## Phase F6 — Permissions ⏳
+## Phase F6 — Permissions ✅
 
-- [ ] Permission matrix wired to real CRUD permissions endpoints
-- [ ] Permission toggle changing query execution behavior
+- `[x]` Permission matrix wired to real CRUD permissions endpoints
+- `[x]` Permission toggle changing query execution behavior
+- `[x]` Added `GET /api/auth/roles` for UI to fetch available roles.
+- `[x]` Replaced static hardcoded mock in `permissions/page.tsx` with live data using `connectionsApi` and `permissionsApi`.
+- `[x]` Frontend TypeScript compilation clean.
+- `[x]` Wrote `scripts/verify_f6_dod.py` for cross-phase validation of chat access block when permission is explicitly set to `none`.
 
 ---
 

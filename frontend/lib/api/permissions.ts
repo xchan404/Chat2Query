@@ -1,4 +1,4 @@
-import apiClient from "./apiClient";
+import { apiFetch } from "./apiClient";
 
 export interface ColumnPermissionCreate {
   column_name: string;
@@ -36,17 +36,20 @@ export interface TablePermissionOut {
 }
 
 export const permissionsApi = {
-  listByConnection: async (connectionId: string): Promise<TablePermissionOut[]> => {
-    const response = await apiClient.get(`/api/permissions/connections/${connectionId}`);
-    return response.data;
+  listByConnection: (connectionId: string): Promise<TablePermissionOut[]> => {
+    return apiFetch(`/api/permissions/connections/${connectionId}`);
   },
 
-  createOrUpdate: async (data: TablePermissionCreate): Promise<TablePermissionOut> => {
-    const response = await apiClient.post("/api/permissions/tables", data);
-    return response.data;
+  createOrUpdate: (data: TablePermissionCreate): Promise<TablePermissionOut> => {
+    return apiFetch("/api/permissions/tables", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
-  delete: async (permissionId: string): Promise<void> => {
-    await apiClient.delete(`/api/permissions/tables/${permissionId}`);
+  delete: (permissionId: string): Promise<void> => {
+    return apiFetch(`/api/permissions/tables/${permissionId}`, {
+      method: "DELETE",
+    });
   },
 };

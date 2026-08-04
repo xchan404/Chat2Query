@@ -53,6 +53,7 @@ async def create_table_permission(
         description=f"Permission created for {data.schema_name}.{data.table_name}",
     )
     await db.commit()
+    saved = await repo.get_table_permission_by_id(saved.id)
     return TablePermissionOut.model_validate(saved)
 
 
