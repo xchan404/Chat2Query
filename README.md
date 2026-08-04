@@ -47,11 +47,12 @@ Here is **Chat2Query** operating cleanly in real time, featuring a high-contrast
 ## ✨ Key Capabilities
 
 - 🛡️ **8-Step AST SQL Safety Pipeline**: Validates raw SQL through `sqlglot` before execution. Rejects DDL/DML, stacked queries, unquoted comment injections, system catalog access, and enforces tenant row filters and result set limit clamping.
-- ⚡ **LangGraph Agent Orchestration**: Parallelized branch execution (`asyncio.gather`) combining SQL generation, document dense vector retrieval (`BAAI/bge-m3`), intent classification (`database`, `document`, `hybrid`, `clarification`, `general`), and multi-turn context resolution.
+- ⚡ **LangGraph Agent Orchestration**: Parallelized branch execution (`asyncio.gather`) combining SQL generation, document dense vector retrieval (`BAAI/bge-m3`), intent classification, and multi-turn context resolution.
 - 📡 **Real-Time SSE Streaming**: Emits typed Server-Sent Event frames (`intent`, `sql_result`, `citation`, `token`, `done`) powering live exposed evidence ledger panels on the frontend.
 - 🔒 **Multi-Tenant Isolation**: Enforces organization-level and row-level tenant boundary isolation on every database adapter query, document vector lookup, and REST endpoint.
-- 🎨 **Neo-Brutalist High-Contrast UI**: Built with Next.js 16 (App Router), Tailwind CSS, zero-border-radius brutalist aesthetics, full keyboard accessibility (`focus-visible`), reduced motion support (`prefers-reduced-motion`), and responsive mobile layout (`<=860px`).
+- 🏢 **Serious Enterprise UI**: Built with Next.js 16 (App Router) and Tailwind CSS. Features a Bloomberg/SAP-inspired data-dense layout, Charcoal Obsidian palettes, pure white surfaces, and full keyboard accessibility.
 - 📜 **Audit Trail & Governance**: Comprehensive audit logging recording connection tests, schema syncs, role-based permission mutations, file uploads, logins, and chat turns.
+- ⚠️ **Resilient LLM Error Handling**: Safely intercepts upstream LLM provider outages (e.g., Anthropic API credit exhaustion) and securely bubbles graceful, descriptive error boundaries to the client UI instead of defaulting to unverified hallucinatory fallbacks.
 
 ---
 
