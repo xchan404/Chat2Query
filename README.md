@@ -60,50 +60,69 @@ Here is **Chat2Query** operating cleanly in real time, featuring a high-contrast
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Frontend (Next.js 16 + React Query + Tailwind)"]
-        UI["Neo-Brutalist UI"]
-        CmdK["Command Palette (Ctrl+K)"]
+    %% Define styles for distinct layers
+    classDef client fill:none,stroke:#0ea5e9,stroke-width:2px,stroke-dasharray: 5 5
+    classDef api fill:none,stroke:#10b981,stroke-width:2px
+    classDef engine fill:none,stroke:#f59e0b,stroke-width:2px
+    classDef security fill:none,stroke:#ef4444,stroke-width:2px
+    classDef data fill:none,stroke:#6366f1,stroke-width:2px
+    
+    subgraph Client ["🖥️ Client (Next.js 16)"]
+        UI["Serious Enterprise UI"]
+        CmdK["Command Palette"]
         Rail["Exposed Evidence Ledger"]
     end
+    class Client client
 
-    subgraph API ["Backend Gateway (FastAPI)"]
+    subgraph API ["⚡ Gateway (FastAPI)"]
         Auth["JWT & Tenant Middleware"]
         Router["REST & SSE Endpoints"]
         Audit["Audit Logging Service"]
     end
+    class API api
 
-    subgraph Engine ["LangGraph Orchestrator Engine"]
+    subgraph Engine ["🧠 LangGraph Orchestrator"]
         Classifier["Intent Node (classifier_node)"]
-        DBNode["SQL Generation Node (sql_node)"]
-        DocNode["RAG Vector Node (rag_node)"]
-        Synthesizer["Response Synthesis Node"]
+        DBNode["SQL Generation (sql_node)"]
+        DocNode["RAG Vector (rag_node)"]
+        Synthesizer["Response Synthesis"]
     end
+    class Engine engine
 
-    subgraph Security ["SQL Safety Pipeline (sqlglot AST)"]
-        ASTCheck["1. Single Statement Check"]
-        TypeCheck["2. SELECT-only AST Check"]
-        SchemaCheck["3. Schema Permitted Check"]
-        TenantCheck["4. Row Filter Injection (tenant_id)"]
-        LimitCheck["5. LIMIT Clamping (max 100)"]
+    subgraph Security ["🛡️ SQL Safety Pipeline (sqlglot)"]
+        ASTCheck["1. Single Statement"]
+        TypeCheck["2. SELECT-only AST"]
+        SchemaCheck["3. Schema Permitted"]
+        TenantCheck["4. Row Filter (tenant_id)"]
+        LimitCheck["5. LIMIT Clamping"]
     end
+    class Security security
 
-    subgraph Data ["Data Stores & Adapters"]
-        PG[("Platform Postgres (pgvector)")]
-        TargetDB[("Live Adapters (Postgres / MySQL)")]
+    subgraph Data ["💾 Data Stores"]
+        PG[("Platform DB (pgvector)")]
+        TargetDB[("Live Adapters")]
         MinIO[("MinIO File Storage")]
     end
+    class Data data
 
-    UI -->|"POST /api/chat/stream"| Router
-    Router --> Auth
-    Auth --> Classifier
-    Classifier --> DBNode
-    Classifier --> DocNode
-    DBNode --> Security
-    Security -->|"Safe SQL"| TargetDB
-    DocNode -->|"bge-m3 Embeddings"| PG
-    Synthesizer -->|"SSE Token Stream"| Rail
-    Router --> Audit
-    Audit --> PG
+    %% Connections
+    UI == "POST /api/chat/stream" ==> Router
+    Router -.-> Auth
+    Auth -.-> Classifier
+    
+    Classifier -->|"Routes to SQL"| DBNode
+    Classifier -->|"Routes to Vector"| DocNode
+    
+    DBNode -->|"Validates AST"| Security
+    Security == "Executes Safe SQL" ==> TargetDB
+    TargetDB -.-> Synthesizer
+    
+    DocNode == "bge-m3 Embeddings" ==> PG
+    PG -.-> Synthesizer
+    
+    Synthesizer == "SSE Token Stream" ==> Rail
+    Router -.-> Audit
+    Audit -.-> PG
 ```
 
 ---
