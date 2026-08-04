@@ -21,14 +21,14 @@
 
 ---
 
-## 🖼️ Visual Demo
+## 🖼️ Visual Demos (Max 2 Core Views)
 
-Here is Chat2Query operating in real time:
+Here is Chat2Query operating cleanly in real time:
 
-| 1. Real-Time Chat Workspace & Evidence Ledger (Animated WebP) | 2. Fine-Grained RBAC & Schema Permission Matrix |
+| 1. Real-Time Chat Query & Evidence Ledger (Animated WebP) | 2. Fine-Grained RBAC & Schema Permission Matrix |
 | :---: | :---: |
 | ![Chat Workspace Demo](images/demo_chat_stream.webp) | ![Permissions Matrix Demo](images/demo_permissions.png) |
-| *SSE token streaming, multi-turn context, and live SQL execution evidence panel* | *Table-level read/write/none access, row-level SQL filters, and column masking* |
+| *Live natural language query execution, SSE token streaming, intent routing, and exposed SQL AST evidence panel* | *Table-level read/write/none access, row-level SQL filters, and column masking* |
 
 ---
 
