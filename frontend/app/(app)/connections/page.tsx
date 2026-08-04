@@ -1,58 +1,143 @@
 "use client";
 
-import React from "react";
+/**
+ * Connections page — F3.
+ * Renders real connection data from GET /api/database-connections via TanStack Query.
+ * No hardcoded connection strings, no mockup copy-paste.
+ */
+
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { connectionsApi, type ConnectionOut } from "@/lib/api/connections";
+import { ConnectionCard } from "@/components/connections/ConnectionCard";
+import { ConnectionForm } from "@/components/connections/ConnectionForm";
+import { SchemaTree } from "@/components/connections/SchemaTree";
 
 export default function ConnectionsPage() {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ConnectionOut | undefined>();
+  const [schemaConnectionId, setSchemaConnectionId] = useState<string | null>(null);
+
+  const {
+    data: connections,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["connections"],
+    queryFn: connectionsApi.list,
+  });
+
+  const openCreate = () => {
+    setEditTarget(undefined);
+    setFormOpen(true);
+  };
+
+  const openEdit = (conn: ConnectionOut) => {
+    setEditTarget(conn);
+    setFormOpen(true);
+  };
+
+  const schemaConnection = connections?.find((c) => c.id === schemaConnectionId);
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-      <div className="border-b-thick border-ink-dark pb-3 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-          Live Database Connections
-        </h1>
-        <button className="bg-cobalt-signal text-white border-med border-ink-dark px-4 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      {/* Page TopBar */}
+      <div className="flex items-center justify-between p-3 px-5 bg-surface border-b-thick border-ink-dark">
+        <div>
+          <h1 className="font-display font-extrabold text-sm uppercase tracking-wider text-ink-dark">
+            Live Connections
+          </h1>
+          <p className="font-mono text-[10px] text-ink-muted mt-0.5 uppercase tracking-widest">
+            // Registered database connections — tenant-scoped
+          </p>
+        </div>
+        <button
+          id="btn-new-connection"
+          onClick={openCreate}
+          className="bg-yellow-signal text-ink-dark border-thick border-ink-dark px-5 py-2 font-display font-extrabold text-xs uppercase shadow-hard hover:bg-ink-dark hover:text-yellow-signal transition-none cursor-pointer"
+        >
           + NEW CONNECTION
         </button>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4">
-        <div className="bg-white border-thick border-ink-dark p-4.5 shadow-hard flex flex-col gap-3.5 border-t-[6px] border-t-emerald-pass">
-          <div className="flex items-center justify-between border-b-med border-ink-dark pb-2">
-            <span className="font-display font-extrabold text-base uppercase">Prod-Postgres-Primary</span>
-            <span className="font-mono text-[11px] font-extrabold px-2 py-1 border-med border-emerald-pass bg-emerald-bg text-emerald-pass uppercase">
-              CONNECTED
-            </span>
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {/* Loading */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-surface border-thick border-ink-dark h-52 animate-pulse opacity-40"
+              />
+            ))}
           </div>
-          <div className="font-mono text-xs font-semibold">HOST: localhost:5432 / DB: platform</div>
-          <div className="font-mono text-xs font-semibold text-emerald-pass">ENCRYPTION: FERNET AES-256 (OK)</div>
-          <div className="mt-auto flex gap-2 pt-2">
-            <button className="bg-ink-dark text-white border-med border-ink-dark px-3 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer">
-              TEST CONNECTION
-            </button>
-            <button className="bg-ink-dark text-white border-med border-ink-dark px-3 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer">
-              SYNC SCHEMA
-            </button>
-          </div>
-        </div>
+        )}
 
-        <div className="bg-white border-thick border-ink-dark p-4.5 shadow-hard flex flex-col gap-3.5 border-t-[6px] border-t-emerald-pass">
-          <div className="flex items-center justify-between border-b-med border-ink-dark pb-2">
-            <span className="font-display font-extrabold text-base uppercase">MySQL-Replica-Warehouse</span>
-            <span className="font-mono text-[11px] font-extrabold px-2 py-1 border-med border-emerald-pass bg-emerald-bg text-emerald-pass uppercase">
-              CONNECTED
-            </span>
+        {/* Error */}
+        {isError && (
+          <div className="bg-rust-bg border-thick border-rust-warn p-5 max-w-lg">
+            <p className="font-mono text-[11px] font-extrabold text-rust-warn uppercase tracking-widest">
+              LOAD FAILED
+            </p>
+            <p className="font-mono text-xs text-rust-warn mt-2">{error?.message}</p>
           </div>
-          <div className="font-mono text-xs font-semibold">HOST: 10.0.4.12:3306 / DB: warehouse</div>
-          <div className="font-mono text-xs font-semibold text-emerald-pass">ENCRYPTION: FERNET AES-256 (OK)</div>
-          <div className="mt-auto flex gap-2 pt-2">
-            <button className="bg-ink-dark text-white border-med border-ink-dark px-3 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer">
-              TEST CONNECTION
-            </button>
-            <button className="bg-ink-dark text-white border-med border-ink-dark px-3 py-2 font-display font-extrabold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer">
-              SYNC SCHEMA
-            </button>
+        )}
+
+        {/* Empty state */}
+        {connections && connections.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full gap-5 text-center py-20">
+            <div className="bg-surface border-thick border-ink-dark p-8 shadow-hard max-w-sm">
+              <p className="font-mono text-xs font-extrabold uppercase tracking-widest text-ink-muted">
+                // No connections registered
+              </p>
+              <p className="font-body text-sm text-ink-muted mt-3">
+                Add your first database connection to start querying with natural language.
+              </p>
+              <button
+                onClick={openCreate}
+                className="mt-5 bg-yellow-signal text-ink-dark border-thick border-ink-dark px-6 py-2.5 font-display font-extrabold text-xs uppercase shadow-hard hover:bg-ink-dark hover:text-yellow-signal transition-none cursor-pointer w-full"
+              >
+                + ADD CONNECTION
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Connection grid */}
+        {connections && connections.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {connections.map((conn) => (
+              <ConnectionCard
+                key={conn.id}
+                connection={conn}
+                onEdit={openEdit}
+                onViewSchema={(id) => setSchemaConnectionId(id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Modals */}
+      {formOpen && (
+        <ConnectionForm
+          existing={editTarget}
+          onClose={() => {
+            setFormOpen(false);
+            setEditTarget(undefined);
+          }}
+        />
+      )}
+
+      {schemaConnectionId && schemaConnection && (
+        <SchemaTree
+          connectionId={schemaConnectionId}
+          connectionName={schemaConnection.name}
+          onClose={() => setSchemaConnectionId(null)}
+        />
+      )}
     </div>
   );
 }

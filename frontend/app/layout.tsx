@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Chat2Query // Enterprise Data Audit & Control Room",
@@ -15,8 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-paper text-ink-dark">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

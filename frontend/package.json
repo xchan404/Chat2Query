@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-query-devtools": "^5.101.4",
     "@types/js-cookie": "^3.0.6",
     "js-cookie": "^3.0.8",
     "next": "16.2.12",

@@ -34,7 +34,6 @@ async def create_connection(
     service = ConnectionService(db)
     conn = await service.create_connection(
         tenant_id=uuid.UUID(current_user.tenant_id),
-        user_id=uuid.UUID(current_user.user_id),
         data=data,
     )
     from services.audit.audit_service import log_audit_event

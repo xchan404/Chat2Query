@@ -3,6 +3,38 @@
 
 @config "../tailwind.config.ts";
 
+@theme {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Public Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-paper: #F8F5EE;
+  --color-surface: #EDE7DC;
+  --color-surface-alt: #E2DAD0;
+  --color-ink-dark: #0F1419;
+  --color-ink-muted: #4F5863;
+  --color-yellow-signal: #FFD600;
+  --color-yellow-bg: #FFFBE6;
+  --color-cobalt-signal: #0047AB;
+  --color-cobalt-bg: #EFF5FF;
+  --color-purple-signal: #7C3AED;
+  --color-purple-bg: #F5F3FF;
+  --color-cyan-signal: #0284C7;
+  --color-cyan-bg: #F0F9FF;
+  --color-rust-warn: #DC2626;
+  --color-rust-bg: #FEF2F2;
+  --color-emerald-pass: #16A34A;
+  --color-emerald-bg: #F0FDF4;
+  --color-code-bg: #0F172A;
+  --color-code-fg: #F8FAFC;
+
+  --shadow-hard: 4px 4px 0px #0F1419;
+  --shadow-sm: 2px 2px 0px #0F1419;
+  --shadow-yellow: 4px 4px 0px #FFD600;
+  --shadow-cobalt: 4px 4px 0px #0047AB;
+  --shadow-purple: 4px 4px 0px #7C3AED;
+}
+
 :root {
   --bg-paper: #F8F5EE;
   --bg-surface: #EDE7DC;

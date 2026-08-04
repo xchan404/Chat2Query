@@ -200,22 +200,55 @@ tests/integration/test_end_to_end_flow.py::test_integration_hybrid_chat PASSED
 - [x] `next build` compiled cleanly with 0 TypeScript / compilation errors.
 
 **Definition of Done**: ✅
+- **Visual Comparison Verification**:
+  1. `border-radius: 0px !important` confirmed globally across all views, modal popups, buttons, and badges.
+  2. **Token Colors**: `#F8F5EE` paper canvas (`bg-paper`), `#EDE7DC` surface, `#0F1419` iron gall ink borders/text, `#FFD600` canary yellow active signals, `#0047AB` cobalt active navigation item, `#7C3AED` purple badge, `#0284C7` cyan badge, `#DC2626` rust warnings, `#16A34A` emerald pass.
+  3. **Fonts**: Display (`Space Grotesk`), Body (`Public Sans`), Mono (`JetBrains Mono`). Loaded via Google Fonts and verified via `@theme` variables in `globals.css`.
+  4. **Command Palette (`Ctrl+K`)**: Modal overlay opens cleanly over pages with exact brutalist styling.
+  5. **5 Route Screenshots Captured**: `/chat`, `/connections`, `/knowledge`, `/permissions`, `/audit`.
 
 ---
 
-## Phase F2 — Auth & Tenant Context ⏳
+## Phase F2 — Auth & Tenant Context ✅
 
-- [ ] Login page (`/login`), httpOnly-cookie token storage, silent refresh before expiry
-- [ ] `AuthProvider` / `TenantContext`, protected route middleware
+- [x] Login page (`/login`) built with brutalist design tokens, `react-hook-form` + `zod` validation.
+- [x] Inline server error display on authentication failure (no redirect loops or silent failures).
+- [x] `app/api/auth/login/route.ts`, `refresh/route.ts`, `logout/route.ts`, `me/route.ts` Next.js route handlers proxying to FastAPI backend (`http://localhost:8000`).
+- [x] `httpOnly` cookie token storage (`c2q_access_token` and `c2q_refresh_token`) set on response, avoiding `localStorage`.
+- [x] `lib/auth/AuthProvider.tsx` providing `user`, `login`, `logout`, and automated silent token refresh decoding JWT `exp` timestamp 60s before expiry.
+- [x] `frontend/middleware.ts` Next.js middleware enforcing protected route redirects (`/chat`, `/connections`, `/knowledge`, `/permissions`, `/audit`) to `/login` when unauthenticated.
+- [x] `TopBar` and `Sidebar` updated to render real authenticated user attributes (`user.username`, `user.roles`, `user.id`) rather than hardcoded string placeholders.
+
+**Definition of Done**: ✅
+- **End-to-End DoD Verification (`scripts/verify_f2_dod.py`)**:
+  1. **Unauthenticated Redirect**: Hitting `http://localhost:3000/chat` directly without a session redirects to `http://localhost:3000/login` (`PASS`).
+  2. **Invalid Credentials Error Handling**: `POST /api/auth/login` with `wrong_user`/`bad_password` returns HTTP 401 with `{"detail": "Invalid username or password"}` and displays inline error box (`PASS`).
+  3. **Valid Credentials Login**: Logging in as `acme_admin` / `admin123` returns 200 OK and sets `httpOnly` cookies `c2q_access_token` and `c2q_refresh_token` (`PASS`).
+  4. **Authenticated Profile Fetch**: `GET /api/auth/me` fetches real database user details (`acme_admin`, `admin@acme.com`, `tenant_id: 8818cd05-c6b5-4dd0-9019-eeebf009a41a`, `roles: ['admin']`) (`PASS`).
+  5. **Silent Token Refresh**: `POST /api/auth/refresh` successfully renews `access_token` before expiry (`PASS`).
 
 ---
 
-## Phase F3 — Connections ⏳
+## Phase F3 — Connections ✅
 
-- [ ] `ConnectionCard` grid wired to real CRUD API (`/api/database-connections`)
-- [ ] `ConnectionForm` with real Zod validation
-- [ ] `ConnectionTestButton` wired to `POST /api/database-connections/{id}/test`
-- [ ] `SchemaTree` wired to `/schemas` and `/tables`
+- [x] Installed and configured `@tanstack/react-query` with `QueryProvider` in root layout.
+- [x] Created `lib/api/apiClient.ts` shared authenticated fetch wrapper with auto Bearer token injection and parsed backend error handling.
+- [x] Created `lib/api/connections.ts` typed client for all 9 connection endpoints (`/api/database-connections` CRUD, `test`, `sync-schema`, `schemas`, `tables`).
+- [x] `components/shared/StatusPill.tsx` created as a reusable status indicator (`ok`, `warn`, `error`, `pending`, `info`).
+- [x] `components/connections/ConnectionCard.tsx` built with real TanStack Query mutations for `TEST`, `SYNC SCHEMA`, `VIEW SCHEMA`, `EDIT`, and `DELETE`. Test/sync outputs displayed inline on card.
+- [x] `components/connections/ConnectionForm.tsx` modal created with `react-hook-form` + `zod` matching `ConnectionCreate` schema.
+- [x] `components/connections/SchemaTree.tsx` slide-over panel created to browse database schemas, tables, and columns fetched from `/api/database-connections/{id}/schemas`.
+- [x] `app/(app)/connections/page.tsx` fully wired to real API; zero hardcoded mockup content.
+- [x] Fixed backend route kwarg issue in `api/routes/connections.py`.
+
+**Definition of Done**: ✅
+- End-to-end API & DB lifecycle verification (`scripts/verify_f3.py`):
+  1. Authenticated as `acme_admin` (`200 OK`)
+  2. Created connection `F3-VERIFY-CONN` (`201 Created`, `id=3f5611cc-89f1-4c5a-8946-c6e1aca106cf`)
+  3. Tested connection against live native PostgreSQL (`200 OK`, `success=True`, `latency=63ms`, PostgreSQL 18.3 version string returned)
+  4. Synced schema (`200 OK`, `schemas=1`, `tables=19`, `columns=179`)
+  5. Retrieved schema hierarchy (`200 OK`, `public` schema with 19 tables and column details)
+  6. Cleaned up test connection (`204 No Content`)
 
 ---
 

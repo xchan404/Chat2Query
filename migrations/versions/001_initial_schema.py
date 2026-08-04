@@ -21,7 +21,16 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Enable required extensions
     op.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"vector\"")
+    # pgvector — optional for local dev. Use SAVEPOINT so failure doesn't
+    # abort the whole transaction (Alembic runs in a single transaction).
+    op.execute("SAVEPOINT before_vector")
+    try:
+        op.execute("CREATE EXTENSION IF NOT EXISTS \"vector\"")
+        op.execute("RELEASE SAVEPOINT before_vector")
+    except Exception:
+        op.execute("ROLLBACK TO SAVEPOINT before_vector")
+        op.execute("RELEASE SAVEPOINT before_vector")
+
 
     # --- tenants ---
     op.create_table(
@@ -260,7 +269,16 @@ def upgrade() -> None:
     op.create_index("ix_document_chunks_knowledge_base_id", "document_chunks", ["knowledge_base_id"])
 
     # Add vector embedding column via raw SQL (pgvector type)
-    op.execute("ALTER TABLE document_chunks ADD COLUMN embedding vector(1024)")
+    op.execute("SAVEPOINT before_embedding")
+    try:
+        op.execute("ALTER TABLE document_chunks ADD COLUMN embedding vector(1024)")
+        op.execute("RELEASE SAVEPOINT before_embedding")
+    except Exception:
+        op.execute("ROLLBACK TO SAVEPOINT before_embedding")
+        op.execute("RELEASE SAVEPOINT before_embedding")
+        # pgvector not installed — fall back to TEXT for local dev
+        op.execute("ALTER TABLE document_chunks ADD COLUMN embedding TEXT")
+
 
     # --- conversations ---
     op.create_table(
@@ -270,6 +288,7 @@ def upgrade() -> None:
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("title", sa.String(500), nullable=True),
         sa.Column("summary", sa.Text(), nullable=True),
+        sa.Column("status", sa.String(20), server_default="active", nullable=False),
         sa.Column("conversation_metadata", postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),

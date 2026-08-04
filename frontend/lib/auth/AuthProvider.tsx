@@ -1,194 +1,140 @@
 "use client";
 
 /**
- * AuthContext — provides the current user, auth state, login/logout actions,
- * and silent refresh scheduling.
- *
- * Silent refresh: we decode the access_token JWT to read its `exp` claim
- * and schedule a refresh 60 seconds before expiry. This keeps sessions alive
- * without the user noticing. On every mount we also check the stored token
- * and restore the session if valid (or refresh if expired).
+ * AuthProvider & TenantContext — provides current authenticated UserOut context,
+ * login, logout, and automated silent token refresh before JWT expiration.
  */
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { login as apiLogin, refreshTokens, getMe, type UserOut } from "@/lib/api/auth";
-import { tokenStorage } from "@/lib/auth/tokenStorage";
+import { authApi, type UserOut, type LoginRequest } from "@/lib/api/auth";
 
-// ── JWT decode (no library needed — we just read the payload) ────────────────
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const payloadB64 = token.split(".")[1];
-    if (!payloadB64) return null;
-    // Base64url → Base64 → JSON
-    const padded = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
-    const json = atob(padded);
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-function getTokenExpMs(token: string): number | null {
-  const payload = decodeJwtPayload(token);
-  if (!payload || typeof payload.exp !== "number") return null;
-  return payload.exp * 1000; // seconds → ms
-}
-
-// ── Context shape ─────────────────────────────────────────────────────────────
-
-interface AuthContextValue {
+interface AuthContextType {
   user: UserOut | null;
   isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
-  getAccessToken: () => string | null;
+  login: (credentials: LoginRequest) => Promise<void>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ── Provider ──────────────────────────────────────────────────────────────────
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isLoading: true,
+  login: async () => {},
+  logout: async () => {},
+  refresh: async () => {},
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const [user, setUser] = useState<UserOut | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Schedule a silent refresh 60s before expiry
-  const scheduleRefresh = useCallback((accessToken: string) => {
+  const clearRefreshTimer = useCallback(() => {
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
     }
+  }, []);
 
-    const expMs = getTokenExpMs(accessToken);
-    if (!expMs) return;
+  const parseJwtExp = (token: string): number | null => {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      if (!payloadBase64) return null;
+      const decodedJson = atob(payloadBase64);
+      const payload = JSON.parse(decodedJson);
+      return typeof payload.exp === "number" ? payload.exp : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const scheduleSilentRefresh = useCallback((accessToken: string) => {
+    clearRefreshTimer();
+    const expUnix = parseJwtExp(accessToken);
+    if (!expUnix) return;
 
     const nowMs = Date.now();
-    const msUntilRefresh = expMs - nowMs - 60_000; // 60s buffer
+    const expMs = expUnix * 1000;
+    // Schedule refresh 60 seconds before expiration
+    const refreshDelayMs = Math.max(expMs - nowMs - 60_000, 5000);
 
-    if (msUntilRefresh <= 0) {
-      // Already expired or about to — refresh immediately
-      void performRefresh();
-      return;
-    }
+    refreshTimerRef.current = setTimeout(async () => {
+      try {
+        const tokens = await authApi.refresh();
+        if (tokens.access_token) {
+          scheduleSilentRefresh(tokens.access_token);
+        }
+      } catch {
+        /* Failed to refresh silently — session expired */
+        setUser(null);
+      }
+    }, refreshDelayMs);
+  }, [clearRefreshTimer]);
 
-    refreshTimerRef.current = setTimeout(() => {
-      void performRefresh();
-    }, msUntilRefresh);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const performRefresh = useCallback(async () => {
-    const refreshToken = tokenStorage.getRefreshToken();
-    if (!refreshToken) {
-      logout();
-      return;
-    }
-
+  const fetchCurrentUser = useCallback(async () => {
     try {
-      const tokens = await refreshTokens({ refresh_token: refreshToken });
-      tokenStorage.setTokens(tokens.access_token, tokens.refresh_token);
-      scheduleRefresh(tokens.access_token);
+      const userData = await authApi.me();
+      setUser(userData);
+      // Automatically refresh token on mount to obtain access_token and schedule silent refresh timer
+      const tokens = await authApi.refresh();
+      if (tokens.access_token) {
+        scheduleSilentRefresh(tokens.access_token);
+      }
     } catch {
-      // Refresh failed — force re-login
-      logout();
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, [scheduleRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scheduleSilentRefresh]);
 
-  const logout = useCallback(() => {
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
+  useEffect(() => {
+    fetchCurrentUser();
+    return () => clearRefreshTimer();
+  }, [fetchCurrentUser, clearRefreshTimer]);
+
+  const login = async (credentials: LoginRequest) => {
+    const tokens = await authApi.login(credentials);
+    if (tokens.access_token) {
+      scheduleSilentRefresh(tokens.access_token);
     }
-    tokenStorage.clearTokens();
+    const userData = await authApi.me();
+    setUser(userData);
+    router.push("/chat");
+  };
+
+  const logout = async () => {
+    clearRefreshTimer();
+    try {
+      await authApi.logout();
+    } catch {
+      /* ignore */
+    }
     setUser(null);
     router.push("/login");
-  }, [router]);
+  };
 
-  // On mount: restore session from stored tokens
-  useEffect(() => {
-    const restore = async () => {
-      const accessToken = tokenStorage.getAccessToken();
-      if (!accessToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if expired — if so, try refresh first
-      const expMs = getTokenExpMs(accessToken);
-      if (expMs && Date.now() >= expMs) {
-        await performRefresh();
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const me = await getMe(accessToken);
-        setUser(me);
-        scheduleRefresh(accessToken);
-      } catch {
-        // Token invalid on server — clear and redirect
-        tokenStorage.clearTokens();
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void restore();
-
-    return () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const login = useCallback(
-    async (username: string, password: string) => {
-      const tokens = await apiLogin({ username, password });
-      tokenStorage.setTokens(tokens.access_token, tokens.refresh_token);
-
-      const me = await getMe(tokens.access_token);
-      setUser(me);
-      scheduleRefresh(tokens.access_token);
-
-      router.push("/chat");
-    },
-    [router, scheduleRefresh]
-  );
-
-  const getAccessToken = useCallback(() => tokenStorage.getAccessToken(), []);
+  const refresh = async () => {
+    const tokens = await authApi.refresh();
+    if (tokens.access_token) {
+      scheduleSilentRefresh(tokens.access_token);
+    }
+    const userData = await authApi.me();
+    setUser(userData);
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        getAccessToken,
-      }}
-    >
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return ctx;
+  return context;
 }

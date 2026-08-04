@@ -11,14 +11,14 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -38,7 +38,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     // Will redirect via useEffect — render nothing while redirecting
     return null;
   }

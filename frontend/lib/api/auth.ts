@@ -1,15 +1,7 @@
 /**
- * Auth API client — typed wrappers for /api/auth/* endpoints.
- * Source of truth: openapi.json — do not reconstruct shapes from memory.
- *
- * POST /api/auth/login   → LoginRequest  → TokenPair
- * POST /api/auth/refresh → RefreshRequest → TokenPair
- * GET  /api/auth/me      → (bearer)       → UserOut
+ * Auth API client — calls Next.js auth route handlers that manage httpOnly cookies.
+ * Source of truth: openapi.json.
  */
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-// ── Shapes from openapi.json ──────────────────────────────────────────────────
 
 export interface LoginRequest {
   username: string;
@@ -17,7 +9,7 @@ export interface LoginRequest {
 }
 
 export interface RefreshRequest {
-  refresh_token: string;
+  refresh_token?: string;
 }
 
 export interface TokenPair {
@@ -37,54 +29,49 @@ export interface UserOut {
   created_at: string | null;
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(
-  path: string,
-  init: RequestInit
-): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(init.headers ?? {}),
+      ...(init?.headers ?? {}),
     },
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const message: string =
-      body?.detail ??
-      (Array.isArray(body?.detail)
+      typeof body?.detail === "string"
+        ? body.detail
+        : Array.isArray(body?.detail)
         ? body.detail.map((d: { msg: string }) => d.msg).join(", ")
-        : "Request failed");
+        : `Authentication error (${res.status})`;
     throw new Error(message);
   }
 
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
-// ── Endpoints ─────────────────────────────────────────────────────────────────
+export const authApi = {
+  login: (credentials: LoginRequest): Promise<TokenPair> =>
+    authFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    }),
 
-export async function login(req: LoginRequest): Promise<TokenPair> {
-  return apiFetch<TokenPair>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
-}
+  refresh: (refresh_token?: string): Promise<TokenPair> =>
+    authFetch("/api/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refresh_token }),
+    }),
 
-export async function refreshTokens(req: RefreshRequest): Promise<TokenPair> {
-  return apiFetch<TokenPair>("/api/auth/refresh", {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
-}
+  me: (): Promise<UserOut> =>
+    authFetch("/api/auth/me", {
+      method: "GET",
+    }),
 
-export async function getMe(accessToken: string): Promise<UserOut> {
-  return apiFetch<UserOut>("/api/auth/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-}
+  logout: (): Promise<{ message: string }> =>
+    authFetch("/api/auth/logout", {
+      method: "POST",
+    }),
+};

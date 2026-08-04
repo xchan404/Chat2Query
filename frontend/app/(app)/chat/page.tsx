@@ -1,135 +1,257 @@
 "use client";
 
-import React from "react";
+/**
+ * ChatPage — F4 core Chat screen.
+ * Real-time SSE streaming via streamChat(), populated EvidenceRail,
+ * multi-turn conversation support, zero hardcoded mockup demo text.
+ */
+
+import React, { useState, useRef, useEffect } from "react";
 import { useUIStore } from "@/lib/stores/uiStore";
+import { streamChat } from "@/lib/sse/chatStream";
+import { type SQLResultOut, type CitationOut } from "@/lib/api/chat";
+import { MessageRow, type ChatMessageItem } from "@/components/chat/MessageRow";
+import { Composer } from "@/components/chat/Composer";
+import { EvidenceRail } from "@/components/chat/EvidenceRail";
 
 export default function ChatPage() {
   const { isEvidenceRailOpen, toggleEvidenceRail } = useUIStore();
 
+  const [question, setQuestion] = useState("");
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  // In-flight Evidence state for EvidenceRail
+  const [activeIntent, setActiveIntent] = useState<string | null>(null);
+  const [activeSqlResult, setActiveSqlResult] = useState<SQLResultOut | null>(null);
+  const [activeCitations, setActiveCitations] = useState<CitationOut[]>([]);
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async () => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion || isStreaming) return;
+
+    const userMessageId = `user-${Date.now()}`;
+    const assistantMessageId = `asst-${Date.now()}`;
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    // Clear input
+    setQuestion("");
+
+    // Reset evidence rail for new turn
+    setActiveIntent(null);
+    setActiveSqlResult(null);
+    setActiveCitations([]);
+    setActiveExecutionId(null);
+
+    // Append User Message and empty Assistant Message shell
+    const userMsg: ChatMessageItem = {
+      id: userMessageId,
+      role: "user",
+      content: trimmedQuestion,
+      timestamp: nowTime,
+    };
+
+    const asstMsg: ChatMessageItem = {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "",
+      timestamp: nowTime,
+      intent: "pending...",
+      sources_used: [],
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, userMsg, asstMsg]);
+    setIsStreaming(true);
+
+    try {
+      await streamChat(
+        {
+          question: trimmedQuestion,
+          connection_id: selectedConnectionId,
+          knowledge_base_id: selectedKbId,
+          conversation_id: conversationId,
+        },
+        {
+          onIntent: (data) => {
+            setActiveIntent(data.intent);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId ? { ...msg, intent: data.intent } : msg
+              )
+            );
+          },
+
+          onSqlResult: (sqlData) => {
+            setActiveSqlResult(sqlData);
+            // If execution_id returned in SQLResultOut or rows
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId ? { ...msg, sql: sqlData } : msg
+              )
+            );
+          },
+
+          onCitation: (citationData) => {
+            if (citationData.query_execution_id) {
+              setActiveExecutionId(citationData.query_execution_id);
+            }
+            setActiveCitations((prev) => [...prev, citationData]);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, citations: [...(msg.citations ?? []), citationData] }
+                  : msg
+              )
+            );
+          },
+
+          onToken: (tokenData) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + tokenData.text }
+                  : msg
+              )
+            );
+          },
+
+          onDone: (doneData) => {
+            setConversationId(doneData.conversation_id);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      id: doneData.message_id,
+                      intent: doneData.intent,
+                      sources_used: doneData.sources_used,
+                      isStreaming: false,
+                    }
+                  : msg
+              )
+            );
+            setIsStreaming(false);
+          },
+
+          onError: (errData) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: `[ERROR]: ${errData.detail}`,
+                      isStreaming: false,
+                    }
+                  : msg
+              )
+            );
+            setIsStreaming(false);
+          },
+        }
+      );
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Request failed";
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: `[STREAM ERROR]: ${errMsg}`, isStreaming: false }
+            : msg
+        )
+      );
+      setIsStreaming(false);
+    }
+  };
+
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden">
-      {/* Workspace Area */}
+      {/* Workspace Main Area */}
       <div className="flex-1 flex flex-col min-w-0 border-r-thick border-ink-dark">
-        {/* Workspace Topbar */}
+        {/* Workspace Top Action Bar */}
         <div className="flex items-center justify-between p-2.5 px-4 bg-surface border-b-thick border-ink-dark gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1.5 bg-cobalt-bg border-med border-cobalt-signal px-2.5 py-1 font-mono text-xs font-bold text-cobalt-signal shadow-sm">
-              <span>DB:</span>
-              <select className="bg-transparent border-none font-bold outline-none cursor-pointer">
-                <option>Prod Postgres v16 (Live)</option>
-                <option>Analytics Replica MySQL</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5 bg-cyan-bg border-med border-cyan-signal px-2.5 py-1 font-mono text-xs font-bold text-cyan-signal shadow-sm">
-              <span>KB:</span>
-              <select className="bg-transparent border-none font-bold outline-none cursor-pointer">
-                <option>Q3 Financial Reports</option>
-                <option>Master Agreements PDF</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="font-display font-extrabold text-xs uppercase tracking-wider text-ink-dark">
+              CHAT & EVIDENCE WORKSPACE
+            </span>
+            {conversationId && (
+              <span className="font-mono text-[10px] text-ink-muted bg-paper px-1.5 py-0.5 border border-ink-dark">
+                CONV: {conversationId.slice(0, 8)}...
+              </span>
+            )}
           </div>
+
           <button
+            id="toggle-evidence-rail-btn"
             onClick={toggleEvidenceRail}
             className="bg-ink-dark text-white border-med border-ink-dark px-3 py-1.5 font-display font-bold text-xs uppercase shadow-sm hover:bg-yellow-signal hover:text-ink-dark cursor-pointer transition-none"
           >
-            TOGGLE EVIDENCE RAIL
+            {isEvidenceRailOpen ? "HIDE EVIDENCE RAIL" : "SHOW EVIDENCE RAIL"}
           </button>
         </div>
 
-        {/* Chat Content Area */}
-        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-          <div className="flex flex-col gap-1.5 max-w-[840px]">
-            <div className="flex items-center gap-2.5 font-mono text-xs font-bold">
-              <span className="bg-yellow-signal text-ink-dark px-2 py-0.5 border-med border-ink-dark uppercase font-extrabold">
-                USER
-              </span>
-              <span>11:42:01 AM</span>
+        {/* Message Thread Area */}
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5 bg-paper">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16">
+              <div className="bg-surface border-thick border-ink-dark p-6 shadow-hard max-w-md">
+                <div className="font-mono text-xs font-extrabold uppercase tracking-widest text-ink-dark">
+                  // Chat2Query Control Engine
+                </div>
+                <p className="font-body text-sm text-ink-muted mt-2">
+                  Ask natural language questions to query connected SQL databases or search indexed document knowledge bases.
+                </p>
+                <div className="mt-4 flex flex-col gap-2 font-mono text-[11px]">
+                  <span className="bg-paper p-2 border border-ink-dark text-left font-semibold text-ink-dark">
+                    💡 "What database tables exist in the schema?"
+                  </span>
+                  <span className="bg-paper p-2 border border-ink-dark text-left font-semibold text-ink-dark">
+                    💡 "List total users registered per tenant"
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="bg-white border-thick border-ink-dark p-4 border-l-8 border-l-yellow-signal shadow-sm font-body text-sm">
-              What is the total revenue in Q3 invoice records compared to the contract maximum cap specified in the agreement PDF?
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5 max-w-[840px]">
-            <div className="flex items-center gap-2.5 font-mono text-xs font-bold">
-              <span className="bg-purple-signal text-white px-2 py-0.5 border-med border-ink-dark uppercase font-extrabold">
-                ASSISTANT // HYBRID INTENT (CONF: 0.94)
-              </span>
-              <span>11:42:03 AM</span>
-            </div>
-            <div className="bg-white border-thick border-ink-dark p-4 border-l-8 border-l-purple-signal shadow-sm font-body text-sm">
-              Total Q3 invoice revenue calculated from the live <code>invoices</code> table is <strong>$44,500.50</strong> across 3 paid records.
-              <br /><br />
-              According to page 1 of <code>master_services_agreement.pdf</code>, the maximum annual contract budget value is capped at <strong>$500,000.00</strong>. Current utilization sits at 8.9% of contract allocation.
-            </div>
-          </div>
+          ) : (
+            messages.map((msg) => <MessageRow key={msg.id} message={msg} />)
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat Input Bar */}
-        <div className="p-3.5 px-5 bg-surface border-t-thick border-ink-dark flex gap-3">
-          <input
-            type="text"
-            className="flex-1 bg-white border-thick border-ink-dark p-3 font-body text-sm font-semibold shadow-sm outline-none"
-            placeholder="Ask database query or search document knowledge base..."
-            defaultValue="Count total pending invoices in public.invoices"
-          />
-          <button className="bg-yellow-signal text-ink-dark border-thick border-ink-dark px-6 font-display font-extrabold text-sm uppercase shadow-hard hover:bg-ink-dark hover:text-yellow-signal cursor-pointer">
-            SEND [ENTER]
-          </button>
-        </div>
+        {/* Composer Input Bar */}
+        <Composer
+          question={question}
+          setQuestion={setQuestion}
+          selectedConnectionId={selectedConnectionId}
+          setSelectedConnectionId={setSelectedConnectionId}
+          selectedKbId={selectedKbId}
+          setSelectedKbId={setSelectedKbId}
+          onSend={handleSend}
+          disabled={isStreaming}
+        />
       </div>
 
       {/* Evidence Rail Side Panel */}
       {isEvidenceRailOpen && (
-        <aside className="w-[350px] bg-surface flex flex-col min-w-0 h-full shrink-0">
-          <div className="bg-ink-dark text-white p-2.5 px-3.5 font-display font-extrabold text-xs uppercase tracking-wider flex items-center justify-between border-b-thick border-ink-dark">
-            <span>EXPOSED EVIDENCE LEDGER</span>
-            <span className="bg-yellow-signal text-ink-dark px-1.5 py-0.5 font-mono text-[11px] font-extrabold">
-              LIVE
-            </span>
-          </div>
-
-          <div className="flex bg-surface-alt border-b-thick border-ink-dark">
-            <button className="flex-1 py-2 px-1 font-mono text-[11px] font-extrabold uppercase bg-yellow-signal text-ink-dark border-b-4 border-ink-dark cursor-pointer">
-              SQL EXECUTION
-            </button>
-            <button className="flex-1 py-2 px-1 font-mono text-[11px] font-extrabold uppercase bg-surface text-ink-muted border-r-med border-ink-dark hover:bg-paper cursor-pointer">
-              DOC CITATIONS
-            </button>
-            <button className="flex-1 py-2 px-1 font-mono text-[11px] font-extrabold uppercase bg-surface text-ink-muted hover:bg-paper cursor-pointer">
-              RAW PAYLOAD
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-4">
-            <div className="bg-white border-thick border-ink-dark p-3.5 shadow-sm flex flex-col gap-2.5 border-t-[5px] border-t-cobalt-signal">
-              <div className="flex items-center justify-between font-mono text-[11px] font-extrabold border-b-med border-ink-dark pb-1.5">
-                <span>[EVD-001] SQL AST PIPELINE</span>
-                <span className="bg-emerald-bg text-emerald-pass px-1.5 py-0.5 border border-ink-dark font-extrabold">
-                  VALIDATED
-                </span>
-              </div>
-              <div className="font-mono text-xs font-semibold">DIALECT: PostgreSQL</div>
-              <div className="font-mono text-xs font-semibold">EXECUTION ID: b0e65c0f-7a5e-41d1-97bd-00b694f57240</div>
-              <pre className="bg-code-bg text-code-fg font-mono text-xs p-2.5 border-med border-ink-dark whitespace-pre-wrap">
-                SELECT SUM(amount) AS total_payments FROM invoices LIMIT 1000;
-              </pre>
-              <div className="font-mono text-xs font-semibold">LIVE RESULT (1 ROW / 1.5ms):</div>
-              <table className="w-full border-collapse font-mono text-[11px] bg-white border-med border-ink-dark">
-                <thead>
-                  <tr className="bg-cobalt-bg text-cobalt-signal border-b-med border-ink-dark">
-                    <th className="text-left p-1.5 border-r-med border-ink-dark font-extrabold">total_payments</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="p-1.5 border-r-thin border-ink-dark">$44,500.50</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </aside>
+        <EvidenceRail
+          sqlResult={activeSqlResult}
+          citations={activeCitations}
+          intent={activeIntent}
+          queryExecutionId={activeExecutionId}
+        />
       )}
     </div>
   );
