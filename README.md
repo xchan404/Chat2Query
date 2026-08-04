@@ -254,22 +254,13 @@ curl -N -X POST "http://localhost:8000/api/chat/stream" \
 2. **pgvector Native Local Fallback**:
    - In environments where native local PostgreSQL lacks the `pgvector` extension, vector embedding columns silently degrade to standard `text`. For dense vector similarity search, run the provided `docker-compose.yml` environment containing `pgvector/pgvector:pg16`.
 
----
-
-## 🤝 AI Assistance & Rigorous Verification Story
-
-This platform was developed with pair-programming assistance from **Antigravity**, an AI agentic coding assistant by **Google DeepMind**. 
-
-Rather than accepting unverified code claims, the entire project was built across **16 distinct phases** (8 backend, 8 frontend) using a strict, evidence-based Definition of Done:
-- **Every security rule** was verified against actual failing SQL queries and HTTP 403 response payloads.
-- **Every UI view** was verified with real keyboard focus rings (`focus-visible`), `prefers-reduced-motion` toggles, mobile breakpoint (`<=860px`) horizontal scroll checks, and 3-state (loading, empty, error) data cards.
-- **Receipts & Evidence**: All test logs, screenshots, and WebP recordings are saved in the project repository as concrete receipts of correctness.
+3. **Anthropic API Credits Requirement**:
+   - The Text-to-SQL generation engine relies directly on the Anthropic API (Claude 3.5). In order for natural language queries to be successfully converted into SQL, your `ANTHROPIC_API_KEY` must have a positive credit balance. If your account is out of credits, the API will return a 400 Bad Request error, which the backend will catch and return as a graceful error message to the frontend UI. Ensure you top up credits at console.anthropic.com.
 
 ---
 
 <div align="center">
 
-**Built with rigor by human & AI pair programming.**  
 [Report Bug](https://github.com/xchan404/Chat2Query/issues) • [Request Feature](https://github.com/xchan404/Chat2Query/issues)
 
 </div>
