@@ -76,6 +76,10 @@ skinparam backgroundColor transparent
 skinparam shadowing false
 skinparam defaultFontName Inter
 skinparam ArrowColor #64748b
+skinparam defaultFontColor #0f172a
+skinparam nodeBackgroundColor #f8fafc
+skinparam databaseBackgroundColor #f8fafc
+skinparam packageBackgroundColor transparent
 
 package "🖥️ Client (Next.js 16)" as Client <<Node>> {
   [Serious Enterprise UI] as UI
