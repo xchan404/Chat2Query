@@ -33,7 +33,7 @@ export function EvidenceRail({
   const hasCitations = citations.length > 0;
 
   return (
-    <aside className="w-[350px] bg-surface flex flex-col min-w-0 h-full shrink-0 border-l-thick border-ink-dark">
+    <aside className="w-[350px] max-[860px]:fixed max-[860px]:right-0 max-[860px]:top-12 max-[860px]:bottom-0 max-[860px]:z-40 max-[860px]:shadow-hard max-[860px]:w-[320px] bg-surface flex flex-col min-w-0 h-full shrink-0 border-l-thick border-ink-dark transition-none">
       {/* Header */}
       <div className="bg-ink-dark text-white p-2.5 px-3.5 font-display font-extrabold text-xs uppercase tracking-wider flex items-center justify-between border-b-thick border-ink-dark">
         <span>EXPOSED EVIDENCE LEDGER</span>

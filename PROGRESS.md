@@ -91,10 +91,31 @@
 - [x] Routes: `GET /api/conversations`, `GET /api/conversations/{id}`, `DELETE /api/conversations/{id}`
 - [x] Routes: `GET /api/messages/{id}/citations`, `GET /api/messages/{id}/sql`
 - [x] Routes: `GET /api/audit-logs` (gated to admin role)
+- [x] Tested parsing performance with massive document (`scripts/benchmark_parsing.py`) (verified locally)
+- [x] (Re-verified in F6) Documented upload trade-off (sync processing blocking API response).
+- [x] Verified chunking structure matching Phase 3 constraints
+- [x] **[WARNING]** Hybrid search and pgvector integration has **NOT** been verified against the actual `docker-compose.yml` stack in this development environment due to sandbox constraints (Docker daemon inaccessible, WSL blocked from local network). Native local Postgres lacks the extension, causing embedding columns to silently degrade to text. This **MUST** be verified against a working docker-compose environment before final submission.
+
+**Definition of Done**: ✅
+- `AuditLogRow`/`AuditFilterBar` wired to `GET /api/audit-logs`, admin-gated UI state for non-admin users.
+- Verified backend authorization gate returns HTTP 403 Forbidden directly to non-admin users (`acme_analyst`).
+- Performed real database connection creation action, confirmed it immediately appears in the audit log view on navigation without a hard browser reload.
+
+---
+
+## Phase F8 — Polish & Accessibility Pass ✅
+
+- [x] Visible keyboard focus state (`focus-visible:outline`) implemented on every interactive element across all 6 screens (Login, Chat, Connections, Knowledge, Permissions, Audit).
+- [x] `prefers-reduced-motion` media query respected: streaming reveals, palette animations, and slide-overs transition synchronously when enabled.
+- [x] Responsive mobile layout (`@media (max-width: 860px)`): Sidebar collapses to icon-only navigation, evidence rail converts to slide-over drawer, wide data tables wrapped in `overflow-x-auto`.
+- [x] Verified loading skeletons, empty state cards, and retryable error cards across all 4 list views (Connections, Knowledge, Permissions, Audit).
+- [x] Visual check completed against `frontend-brutalist-mockup.html` across all 5 views.
 
 **Definition of Done**: ✅
 
 ---
+
+# FRONTEND IMPLEMENTATION COMPLETE ✅
 
 ## Phase 8 — Tests, Security Hardening, Docs, Packaging ✅
 

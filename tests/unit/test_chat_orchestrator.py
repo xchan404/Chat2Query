@@ -188,6 +188,14 @@ class TestHybridConcurrencyLatency:
             await asyncio.sleep(0.20)
             return {"retrieved_chunks": [{"chunk_id": "c-1", "content": "text"}]}
 
+        async def mock_classifier_node(state):
+            return {"intent": "hybrid"}
+
+        async def mock_answer_generator_node(state):
+            return {"answer": "Answer"}
+
+        monkeypatch.setattr("agents.graph.classifier_node", mock_classifier_node)
+        monkeypatch.setattr("agents.graph.answer_generator_node", mock_answer_generator_node)
         monkeypatch.setattr("agents.graph.database_node", mock_db_node)
         monkeypatch.setattr("agents.graph.document_node", mock_doc_node)
 
